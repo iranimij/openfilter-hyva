@@ -36,4 +36,15 @@ class SearchPageTest extends HyvaPageTestCase
         }
         self::assertMatchesRegularExpression('#class="of-chip"[^>]*href="[^"]*q=' . M1Catalog::TOKEN . '#', $html);
     }
+
+    public function testThePageWithoutFiltersStillNamesTheFilterDialog(): void
+    {
+        $this->getRequest()->setMethod('GET')->setQueryValue(['q' => 'zzqxnothingmatches']);
+        $this->dispatch('catalogsearch/result/index');
+        $filters = $this->region((string) $this->getResponse()->getBody(), 'of-filters');
+
+        self::assertStringNotContainsString('<details class="of-group', $filters, 'no filters on an empty result');
+        self::assertMatchesRegularExpression('#<dialog id="of-drawer"[^>]*aria-labelledby="of-filters-title"#', (string) $this->getResponse()->getBody());
+        self::assertMatchesRegularExpression('#<h2 id="of-filters-title" class="of-filters__title of-sr">#', $filters);
+    }
 }

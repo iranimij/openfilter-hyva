@@ -40,9 +40,12 @@ $debug = $viewModels->require(Debug::class);
         </div>
     <?php endif; ?>
     <div id="of-filters" class="of-filters" data-of-region="filters"<?= /* @noEscape */ $debug->region() ?>>
+    <?php /* The dialog's accessible name: printed on every page, visually hidden when there are no filters. */ ?>
+    <h2 id="of-filters-title" class="of-filters__title<?= $groups === [] ? ' of-sr' : '' ?>">
+        <?= $escaper->escapeHtml(__('Shop By')) ?>
+    </h2>
     <?php if ($groups !== [] && $renderer): ?>
         <nav class="of-filters__nav" aria-labelledby="of-filters-title">
-            <h2 id="of-filters-title" class="of-filters__title"><?= $escaper->escapeHtml(__('Shop By')) ?></h2>
             <?php foreach ($groups as $group): ?>
                 <?= /* @noEscape */ $renderer->setData('group', $group)->toHtml() ?>
             <?php endforeach; ?>

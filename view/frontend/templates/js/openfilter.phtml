@@ -34,6 +34,10 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
 <script>
 (() => {
     'use strict';
+    // Browsers without a modal <dialog> (Safari < 15.4) keep the filters in place on phones: no drawer, no button.
+    if (!window.HTMLDialogElement || !HTMLDialogElement.prototype.showModal) {
+        document.documentElement.classList.add('of-inline');
+    }
     const REGIONS = ['of-filters', 'of-state', 'of-results'];
     const HEAD = ['meta[name="robots"]', 'link[rel="canonical"]', 'link[rel="prev"]', 'link[rel="next"]'];
     const CACHE_SIZE = 10;
