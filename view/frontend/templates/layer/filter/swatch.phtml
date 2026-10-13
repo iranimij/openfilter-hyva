@@ -41,7 +41,11 @@ $renderOption = static function (FilterOption $option) use ($escaper, $swatches,
         $visual = '<span class="of-swatch__visual of-swatch__text" aria-hidden="true">'
             . $escaper->escapeHtml($swatch['value']) . '</span>';
     }
+    // A text swatch that shows its own label prints the label once (the visible one; the other for screen readers).
+    $textOnly = $swatch['type'] === Swatch::TEXT
+        && mb_strtolower(trim((string) $swatch['value'])) === mb_strtolower(trim($option->getLabel()));
     return '<li class="of-swatches__item"><a class="of-swatch' . ($selected ? ' of-swatch--selected' : '')
+        . ($textOnly ? ' of-swatch--text' : '')
         . '" href="' . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
         . $escaper->escapeHtmlAttr($option->getValue()) . '"'
         . ($selected ? ' aria-current="true"' : '')
