@@ -6,7 +6,9 @@
 
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
 use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Iranimij\OpenFilter\ViewModel\Debug;
 use Magento\Framework\Escaper;
 use Magento\Framework\View\Element\Template;
 
@@ -16,6 +18,7 @@ use Magento\Framework\View\Element\Template;
  *
  * @var Template $block
  * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
  */
 /** @var FilterGroup $group */
 $group = $block->getData('group');
@@ -24,9 +27,11 @@ $ident = (string) ($group->getKey() ?? $group->getCode());
 $id = 'of-group-' . preg_replace('/[^a-z0-9_-]/i', '-', $ident);
 $options = $block->getChildBlock($group->getDisplay()) ?: $block->getChildBlock('list');
 $selected = $group->getSelectedCount();
+$debug = $viewModels->require(Debug::class);
 ?>
 <details class="of-group of-group--<?= $escaper->escapeHtmlAttr($group->getDisplay()) ?>"
-         data-of-group="<?= $escaper->escapeHtmlAttr($ident) ?>"<?= $group->isExpanded() ? ' open' : '' ?>>
+         data-of-group="<?= $escaper->escapeHtmlAttr($ident) ?>"<?= $group->isExpanded() ? ' open' : '' ?>
+         <?= /* @noEscape */ $debug->group($group) ?>>
     <summary class="of-group__title" id="<?= $escaper->escapeHtmlAttr($id) ?>-title">
         <span class="of-group__label"><?= $escaper->escapeHtml($group->getLabel()) ?></span>
         <?php if ($selected > 0): ?>
