@@ -42,26 +42,27 @@ class ModuleTest extends TestCase
         self::assertContains('Hyva_Theme', $sequence);
     }
 
-    public function testComposerRequiresBaseAndCoreAndOnlySuggestsHyva(): void
+    public function testComposerRequiresBaseCoreAndHyvasThemeModuleAndSuggestsTheTheme(): void
     {
         $composer = json_decode((string) file_get_contents(dirname(__DIR__, 2) . '/composer.json'), true);
 
         self::assertSame('MIT', $composer['license']);
         self::assertArrayHasKey('iranimij/module-base', $composer['require']);
         self::assertArrayHasKey('iranimij/openfilter', $composer['require']);
+        self::assertArrayHasKey('hyva-themes/magento2-theme-module', $composer['require']);
         self::assertArrayHasKey('hyva-themes/magento2-default-theme', $composer['suggest']);
         foreach (array_keys($composer['require']) as $package) {
             self::assertMatchesRegularExpression(
-                '#^(php|ext-[a-z0-9_]+|magento/[a-z0-9-]+|iranimij/(module-base|openfilter))$#',
+                '#^(php|ext-[a-z0-9_]+|magento/[a-z0-9-]+|iranimij/(module-base|openfilter)|hyva-themes/magento2-theme-module)$#',
                 $package,
-                'Only php, extensions, magento/*, iranimij/module-base and iranimij/openfilter may be required'
+                'Only php, extensions, magento/*, iranimij/module-base, iranimij/openfilter and Hyvä\'s theme module'
             );
         }
     }
 
-    public function testHyvaLayoutHandlesForCategoryAndSearchExist(): void
+    public function testOpenFilterLayoutHandlesExist(): void
     {
-        foreach (['hyva_catalog_category_view', 'hyva_catalogsearch_result_index'] as $handle) {
+        foreach (['openfilter_hyva_layer', 'openfilter_hyva_category'] as $handle) {
             self::assertFileExists(dirname(__DIR__, 2) . '/view/frontend/layout/' . $handle . '.xml');
         }
     }

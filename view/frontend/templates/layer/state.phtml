@@ -1,0 +1,43 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Magento\Framework\Escaper;
+use Magento\LayeredNavigation\Block\Navigation\State;
+
+/**
+ * Active filters as chips above the results (#of-state; always printed, so the AJAX layer has a region to swap).
+ *
+ * @var State $block
+ * @var Escaper $escaper
+ */
+$active = $block->getActiveFilters();
+?>
+<div id="of-state" class="of-state" data-of-region="state">
+<?php if ($active !== []): ?>
+    <h2 class="of-sr"><?= $escaper->escapeHtml(__('Now Shopping by')) ?></h2>
+    <ul class="of-state__list">
+        <?php foreach ($active as $item):
+            $name = (string) $item->getFilter()->getName();
+            $value = strip_tags((string) $item->getLabel());
+            ?>
+            <li>
+                <a class="of-chip" href="<?= $escaper->escapeUrl($item->getRemoveUrl()) ?>" data-of-link
+                   aria-label="<?= $escaper->escapeHtmlAttr(__('Remove %1: %2', $name, $value)) ?>">
+                    <span><?= $escaper->escapeHtml($name) ?>: <?= $escaper->escapeHtml($value) ?></span>
+                    <span class="of-chip__remove" aria-hidden="true">×</span>
+                </a>
+            </li>
+        <?php endforeach; ?>
+        <li>
+            <a class="of-clear" href="<?= $escaper->escapeUrl($block->getClearUrl()) ?>" data-of-link>
+                <?= $escaper->escapeHtml(__('Clear All')) ?>
+            </a>
+        </li>
+    </ul>
+<?php endif; ?>
+</div>
