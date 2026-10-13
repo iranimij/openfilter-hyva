@@ -6,36 +6,41 @@
 
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilter\ViewModel\State;
 use Magento\Framework\Escaper;
-use Magento\LayeredNavigation\Block\Navigation\State;
+use Magento\LayeredNavigation\Block\Navigation\State as StateBlock;
 
 /**
- * Active filters as chips above the results (#of-state; always printed, so the AJAX layer has a region to swap).
+ * Active filters as chips above the results (#of-state; always printed, so the AJAX layer has a region to swap):
+ * "Colour: Blue ×" links that remove one value, and "Clear all".
  *
- * @var State $block
+ * @var StateBlock $block
  * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
  */
+$stateViewModel = $viewModels->require(State::class);
 $active = $block->getActiveFilters();
+$chips = $stateViewModel->chips($active);
 ?>
 <div id="of-state" class="of-state" data-of-region="state">
-<?php if ($active !== []): ?>
+<?php if ($chips !== []): ?>
     <h2 class="of-sr"><?= $escaper->escapeHtml(__('Now Shopping by')) ?></h2>
     <ul class="of-state__list">
-        <?php foreach ($active as $item):
-            $name = (string) $item->getFilter()->getName();
-            $value = strip_tags((string) $item->getLabel());
-            ?>
+        <?php foreach ($chips as $chip): ?>
             <li>
-                <a class="of-chip" href="<?= $escaper->escapeUrl($item->getRemoveUrl()) ?>" data-of-link
-                   aria-label="<?= $escaper->escapeHtmlAttr(__('Remove %1: %2', $name, $value)) ?>">
-                    <span><?= $escaper->escapeHtml($name) ?>: <?= $escaper->escapeHtml($value) ?></span>
+                <a class="of-chip" href="<?= $escaper->escapeUrl($chip->getRemoveUrl()) ?>" data-of-link
+                   data-of-focus="results"
+                   aria-label="<?= $escaper->escapeHtmlAttr(__('Remove filter %1', $chip->getText())) ?>">
+                    <span class="of-chip__text"><?= $escaper->escapeHtml($chip->getText()) ?></span>
                     <span class="of-chip__remove" aria-hidden="true">×</span>
                 </a>
             </li>
         <?php endforeach; ?>
         <li>
-            <a class="of-clear" href="<?= $escaper->escapeUrl($block->getClearUrl()) ?>" data-of-link>
-                <?= $escaper->escapeHtml(__('Clear All')) ?>
+            <a class="of-clear" href="<?= $escaper->escapeUrl($stateViewModel->clearUrl($active)) ?>" data-of-link
+               data-of-focus="results">
+                <?= $escaper->escapeHtml(__('Clear all')) ?>
             </a>
         </li>
     </ul>
