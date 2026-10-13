@@ -10,11 +10,6 @@ namespace Iranimij\OpenFilterHyva\Test\Integration;
 
 use Iranimij\OpenFilter\Model\Config;
 use Iranimij\OpenFilter\Test\Integration\Catalog\M1Catalog;
-use Magento\Framework\App\Config\MutableScopeConfigInterface;
-use Magento\Framework\View\DesignInterface;
-use Magento\TestFramework\Helper\Bootstrap;
-use Magento\TestFramework\TestCase\AbstractController;
-use Magento\Theme\Model\ResourceModel\Theme\CollectionFactory as ThemeCollectionFactory;
 
 /**
  * A layered category page on Hyvä with OpenFilter's templates: the three regions, a real link for every option
@@ -24,27 +19,8 @@ use Magento\Theme\Model\ResourceModel\Theme\CollectionFactory as ThemeCollection
  * @magentoDbIsolation disabled
  * @magentoAppIsolation enabled
  */
-class CategoryPageTest extends AbstractController
+class CategoryPageTest extends HyvaPageTestCase
 {
-    /** @var array{category: int, store: int, options: array<string, array<string, int>>} */
-    private static array $catalog;
-
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-        self::$catalog = M1Catalog::create();
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $theme = Bootstrap::getObjectManager()->get(ThemeCollectionFactory::class)->create()
-            ->addFieldToFilter('area', 'frontend')->addFieldToFilter('theme_path', 'Hyva/default')->getFirstItem();
-        self::assertNotEmpty($theme->getId(), 'Hyvä default theme registered');
-        // The frontend area loads its design before setUp, so the store's theme setting comes too late here.
-        Bootstrap::getObjectManager()->get(DesignInterface::class)->setDesignTheme('Hyva/default', 'frontend');
-    }
-
     public function testRegionsWrapFiltersStateAndResults(): void
     {
         $html = $this->page([M1Catalog::COLOR => 'red']);
@@ -110,35 +86,5 @@ class CategoryPageTest extends AbstractController
         self::assertStringNotContainsString('openfilter.css', $html);
         self::assertStringContainsString('filter-option', $html, "Hyvä's own filter template");
         self::assertStringContainsString('frontend/Hyva/default/', $html, 'rendered with Hyvä');
-    }
-
-    private function config(string $path, string $value): void
-    {
-        Bootstrap::getObjectManager()->get(MutableScopeConfigInterface::class)->setValue($path, $value, 'store', 'default');
-    }
-
-    /**
-     * @param array<string, string> $query
-     */
-    private function page(array $query): string
-    {
-        $this->getRequest()->setMethod('GET')->setQueryValue($query);
-        $this->dispatch('catalog/category/view/id/' . self::$catalog['category']);
-        self::assertSame(200, $this->getResponse()->getHttpResponseCode());
-
-        return (string) $this->getResponse()->getBody();
-    }
-
-    /**
-     * Markup of one region: from its opening tag to the next region (or the end).
-     */
-    private function region(string $html, string $id): string
-    {
-        $start = strpos($html, 'id="' . $id . '"');
-        self::assertNotFalse($start, "#$id present");
-        $next = preg_match('#id="of-(?:filters|state|results)"#', $html, $m, PREG_OFFSET_CAPTURE, $start + 10)
-            ? $m[0][1] : strlen($html);
-
-        return substr($html, $start, $next - $start);
     }
 }

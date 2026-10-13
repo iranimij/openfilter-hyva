@@ -19,12 +19,14 @@ use Magento\Framework\View\Element\Template;
  */
 /** @var FilterGroup $group */
 $group = $block->getData('group');
-$id = 'of-group-' . preg_replace('/[^a-z0-9_-]/i', '-', $group->getCode());
+// The filter key is unique (an attribute named like a built-in filter has the key "attribute:<code>").
+$ident = (string) ($group->getKey() ?? $group->getCode());
+$id = 'of-group-' . preg_replace('/[^a-z0-9_-]/i', '-', $ident);
 $options = $block->getChildBlock($group->getDisplay()) ?: $block->getChildBlock('list');
 $selected = $group->getSelectedCount();
 ?>
 <details class="of-group of-group--<?= $escaper->escapeHtmlAttr($group->getDisplay()) ?>"
-         data-of-group="<?= $escaper->escapeHtmlAttr($group->getCode()) ?>"<?= $group->isExpanded() ? ' open' : '' ?>>
+         data-of-group="<?= $escaper->escapeHtmlAttr($ident) ?>"<?= $group->isExpanded() ? ' open' : '' ?>>
     <summary class="of-group__title" id="<?= $escaper->escapeHtmlAttr($id) ?>-title">
         <span class="of-group__label"><?= $escaper->escapeHtml($group->getLabel()) ?></span>
         <?php if ($selected > 0): ?>

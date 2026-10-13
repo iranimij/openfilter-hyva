@@ -1,0 +1,49 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * "N stars and up": five stars, the first N filled, the label for screen readers.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ */
+/** @var FilterGroup $group */
+$group = $block->getData('group');
+$groupId = (string) $block->getData('group_id');
+?>
+<ul class="of-options of-rating" aria-labelledby="<?= $escaper->escapeHtmlAttr($groupId) ?>-title">
+    <?php foreach ($group->getOptions() as $option):
+        $stars = max(0, min(5, (int) $option->getValue()));
+        ?>
+        <li class="of-options__item">
+            <a class="of-option<?= $option->isSelected() ? ' of-option--selected' : '' ?>"
+               href="<?= $escaper->escapeUrl($option->getUrl()) ?>" data-of-link
+                <?= $option->isSelected() ? 'aria-current="true"' : '' ?>>
+                <span class="of-option__check" aria-hidden="true"></span>
+                <span class="of-rating__stars" aria-hidden="true">
+                    <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <svg class="of-star<?= $i <= $stars ? ' of-star--on' : '' ?>" viewBox="0 0 20 20"
+                             focusable="false">
+                            <path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.8l-5.2 2.8 1-5.8L1.5 7.7l5.9-.9z"/>
+                        </svg>
+                    <?php endfor; ?>
+                </span>
+                <span class="of-option__label of-rating__label"><?= $escaper->escapeHtml($option->getLabel()) ?></span>
+                <?php if ($option->isSelected()): ?>
+                    <span class="of-sr"><?= $escaper->escapeHtml(__('selected')) ?></span>
+                <?php endif; ?>
+                <span class="of-option__count"><?= (int) $option->getCount() ?><span class="of-sr">
+                    <?= $escaper->escapeHtml(__('products')) ?></span></span>
+            </a>
+        </li>
+    <?php endforeach; ?>
+</ul>

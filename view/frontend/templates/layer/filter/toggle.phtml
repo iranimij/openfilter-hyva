@@ -1,0 +1,40 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * Yes/no filters (built-ins in stock, on sale, new; Yes/No attributes): one switch, the "Yes" option (value 1).
+ * Without a "Yes" option every option is shown as a switch.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ */
+/** @var FilterGroup $group */
+$group = $block->getData('group');
+$groupId = (string) $block->getData('group_id');
+$options = array_filter($group->getOptions(), static fn ($option): bool => $option->getValue() === '1')
+    ?: $group->getOptions();
+?>
+<ul class="of-options" aria-labelledby="<?= $escaper->escapeHtmlAttr($groupId) ?>-title">
+    <?php foreach ($options as $option): ?>
+        <li class="of-options__item">
+            <a class="of-option of-toggle<?= $option->isSelected() ? ' of-option--selected' : '' ?>"
+               href="<?= $escaper->escapeUrl($option->getUrl()) ?>" data-of-link
+                <?= $option->isSelected() ? 'aria-current="true"' : '' ?>>
+                <span class="of-toggle__switch" aria-hidden="true"></span>
+                <span class="of-option__label"><?= $escaper->escapeHtml($option->getLabel()) ?></span>
+                <span class="of-sr"><?= $escaper->escapeHtml($option->isSelected() ? __('on') : __('off')) ?></span>
+                <span class="of-option__count"><?= (int) $option->getCount() ?><span class="of-sr">
+                    <?= $escaper->escapeHtml(__('products')) ?></span></span>
+            </a>
+        </li>
+    <?php endforeach; ?>
+</ul>

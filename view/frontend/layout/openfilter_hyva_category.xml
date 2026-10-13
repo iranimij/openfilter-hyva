@@ -16,10 +16,19 @@ results) and #of-results (a container around the product list block, so empty re
             <action method="setTemplate">
                 <argument name="template" xsi:type="string">Iranimij_OpenFilterHyva::layer/view.phtml</argument>
             </action>
+            <!-- Options per display mode: a child named after the mode (FilterGroup::getDisplay()), "list" as fallback. -->
             <block class="Magento\Framework\View\Element\Template" name="openfilter.category.group" as="of_group"
                    template="Iranimij_OpenFilterHyva::layer/group.phtml">
                 <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.list" as="list"
                        template="Iranimij_OpenFilterHyva::layer/filter/list.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.swatch" as="swatch"
+                       template="Iranimij_OpenFilterHyva::layer/filter/swatch.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.rating" as="rating"
+                       template="Iranimij_OpenFilterHyva::layer/filter/rating.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.toggle" as="toggle"
+                       template="Iranimij_OpenFilterHyva::layer/filter/toggle.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.category" as="category"
+                       template="Iranimij_OpenFilterHyva::layer/filter/category.phtml"/>
             </block>
         </referenceBlock>
         <referenceBlock name="catalog.navigation.state">
