@@ -26,7 +26,8 @@ $groupId = (string) $block->getData('group_id');
 $renderOption = static function (FilterOption $option) use ($escaper): string {
     $selected = $option->isSelected();
     return '<li class="of-options__item"><a class="of-option' . ($selected ? ' of-option--selected' : '') . '" href="'
-        . $escaper->escapeUrl($option->getUrl()) . '" data-of-link' . ($selected ? ' aria-current="true"' : '') . '>'
+        . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
+        . $escaper->escapeHtmlAttr($option->getValue()) . '"' . ($selected ? ' aria-current="true"' : '') . '>'
         . '<span class="of-option__check" aria-hidden="true"></span>'
         . '<span class="of-option__label">' . $escaper->escapeHtml($option->getLabel()) . '</span>'
         . ($selected ? '<span class="of-sr">' . $escaper->escapeHtml(__('selected')) . '</span>' : '')

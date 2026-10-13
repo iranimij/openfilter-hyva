@@ -28,6 +28,7 @@ $options = array_filter($group->getOptions(), static fn ($option): bool => $opti
         <li class="of-options__item">
             <a class="of-option of-toggle<?= $option->isSelected() ? ' of-option--selected' : '' ?>"
                href="<?= $escaper->escapeUrl($option->getUrl()) ?>" data-of-link
+               data-of-value="<?= $escaper->escapeHtmlAttr($option->getValue()) ?>"
                 <?= $option->isSelected() ? 'aria-current="true"' : '' ?>>
                 <span class="of-toggle__switch" aria-hidden="true"></span>
                 <span class="of-option__label"><?= $escaper->escapeHtml($option->getLabel()) ?></span>

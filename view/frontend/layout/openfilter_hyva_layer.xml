@@ -10,4 +10,10 @@
     <head>
         <css src="Iranimij_OpenFilter::css/openfilter.css"/>
     </head>
+    <body>
+        <referenceContainer name="before.body.end">
+            <block class="Magento\Framework\View\Element\Template" name="openfilter.js"
+                   template="Iranimij_OpenFilterHyva::js/openfilter.phtml"/>
+        </referenceContainer>
+    </body>
 </page>

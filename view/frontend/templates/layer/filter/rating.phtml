@@ -27,6 +27,7 @@ $groupId = (string) $block->getData('group_id');
         <li class="of-options__item">
             <a class="of-option<?= $option->isSelected() ? ' of-option--selected' : '' ?>"
                href="<?= $escaper->escapeUrl($option->getUrl()) ?>" data-of-link
+               data-of-value="<?= $escaper->escapeHtmlAttr($option->getValue()) ?>"
                 <?= $option->isSelected() ? 'aria-current="true"' : '' ?>>
                 <span class="of-option__check" aria-hidden="true"></span>
                 <span class="of-rating__stars" aria-hidden="true">

@@ -22,8 +22,10 @@ use Magento\LayeredNavigation\Block\Navigation\State as StateBlock;
 $stateViewModel = $viewModels->require(State::class);
 $active = $block->getActiveFilters();
 $chips = $stateViewModel->chips($active);
+$count = (int) $block->getLayer()->getProductCollection()->getSize();
 ?>
-<div id="of-state" class="of-state" data-of-region="state">
+<div id="of-state" class="of-state" data-of-region="state" data-of-count="<?= (int) $count ?>"
+     data-of-announce="<?= $escaper->escapeHtmlAttr($count === 1 ? __('1 product') : __('%1 products', $count)) ?>">
 <?php if ($chips !== []): ?>
     <h2 class="of-sr"><?= $escaper->escapeHtml(__('Now Shopping by')) ?></h2>
     <ul class="of-state__list">

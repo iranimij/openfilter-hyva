@@ -39,7 +39,8 @@ $renderOption = static function (FilterOption $option) use ($escaper, $swatches)
             . $escaper->escapeHtml($swatch['value']) . '</span>';
     }
     return '<li class="of-swatches__item"><a class="of-swatch' . ($selected ? ' of-swatch--selected' : '')
-        . '" href="' . $escaper->escapeUrl($option->getUrl()) . '" data-of-link'
+        . '" href="' . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
+        . $escaper->escapeHtmlAttr($option->getValue()) . '"'
         . ($selected ? ' aria-current="true"' : '') . '>' . $visual
         . '<span class="of-swatch__label">' . $escaper->escapeHtml($option->getLabel()) . '</span>'
         . ($selected ? '<span class="of-sr">' . $escaper->escapeHtml(__('selected')) . '</span>' : '')

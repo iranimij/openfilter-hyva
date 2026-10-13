@@ -22,7 +22,8 @@ $group = $block->getData('group');
 $groupId = (string) $block->getData('group_id');
 $renderOption = static function (FilterOption $option) use ($escaper): string {
     return '<li class="of-options__item"><a class="of-option of-option--link" href="'
-        . $escaper->escapeUrl($option->getUrl()) . '" data-of-link>'
+        . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
+        . $escaper->escapeHtmlAttr($option->getValue()) . '">'
         . '<span class="of-option__label">' . $escaper->escapeHtml($option->getLabel()) . '</span>'
         . '<span class="of-option__count">' . $option->getCount()
         . '<span class="of-sr"> ' . $escaper->escapeHtml(__('products')) . '</span></span></a></li>';
