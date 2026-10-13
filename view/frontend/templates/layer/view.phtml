@@ -8,11 +8,15 @@ declare(strict_types=1);
 
 use Hyva\Theme\Model\ViewModelRegistry;
 use Iranimij\OpenFilter\ViewModel\FilterBlock;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
 use Magento\Framework\Escaper;
 use Magento\LayeredNavigation\Block\Navigation;
 
 /**
- * OpenFilter's filter region (#of-filters): one disclosure per filter, real links underneath.
+ * OpenFilter's filter region (#of-filters): one disclosure per filter, real links underneath. It sits in a <dialog>
+ * that is open in place (the sidebar, and every layout without JavaScript); on phones the AJAX component shows it as
+ * a modal drawer (08 §3, 10 FE8) with staged changes and "Show N products". The dialog is outside the swapped
+ * region, so the drawer stays open while its filters update.
  *
  * @var Navigation $block
  * @var Escaper $escaper
@@ -21,14 +25,32 @@ use Magento\LayeredNavigation\Block\Navigation;
 $filterBlock = $viewModels->require(FilterBlock::class);
 $groups = $block->canShowBlock() ? $filterBlock->groups($block->getFilters()) : [];
 $renderer = $block->getChildBlock('of_group');
+$ajax = $viewModels->require(Ajax::class)->isEnabled();
 ?>
-<div id="of-filters" class="of-filters" data-of-region="filters">
-<?php if ($groups !== [] && $renderer): ?>
-    <nav class="of-filters__nav" aria-labelledby="of-filters-title">
-        <h2 id="of-filters-title" class="of-filters__title"><?= $escaper->escapeHtml(__('Shop By')) ?></h2>
-        <?php foreach ($groups as $group): ?>
-            <?= /* @noEscape */ $renderer->setData('group', $group)->toHtml() ?>
-        <?php endforeach; ?>
-    </nav>
-<?php endif; ?>
-</div>
+<dialog id="of-drawer" class="of-drawer<?= $ajax ? ' of-drawer--js' : '' ?>" open aria-labelledby="of-filters-title"
+        data-of-show="<?= $escaper->escapeHtmlAttr(__('Show %1 products', '%1')) ?>"
+        data-of-show-one="<?= $escaper->escapeHtmlAttr(__('Show 1 product')) ?>">
+    <?php if ($ajax): ?>
+        <div class="of-drawer__head">
+            <span class="of-drawer__title"><?= $escaper->escapeHtml(__('Filters')) ?></span>
+            <button type="button" class="of-drawer__close" data-of-drawer-close
+                    aria-label="<?= $escaper->escapeHtmlAttr(__('Close filters')) ?>">×</button>
+        </div>
+    <?php endif; ?>
+    <div id="of-filters" class="of-filters" data-of-region="filters">
+    <?php if ($groups !== [] && $renderer): ?>
+        <nav class="of-filters__nav" aria-labelledby="of-filters-title">
+            <h2 id="of-filters-title" class="of-filters__title"><?= $escaper->escapeHtml(__('Shop By')) ?></h2>
+            <?php foreach ($groups as $group): ?>
+                <?= /* @noEscape */ $renderer->setData('group', $group)->toHtml() ?>
+            <?php endforeach; ?>
+        </nav>
+    <?php endif; ?>
+    </div>
+    <?php if ($ajax): ?>
+        <div class="of-drawer__foot">
+            <a class="of-drawer__clear" href="#" data-of-drawer-clear><?= $escaper->escapeHtml(__('Clear all')) ?></a>
+            <button type="button" class="of-drawer__apply" data-of-drawer-apply></button>
+        </div>
+    <?php endif; ?>
+</dialog>

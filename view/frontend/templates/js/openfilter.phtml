@@ -42,6 +42,9 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
     const ran = new Set();
     let controller = null;
     let live = null;
+    let drawer = null;
+    let stageTimer = 0;
+    let ignorePop = false;
 
     const sameOrigin = (url) => {
         try {
@@ -113,10 +116,10 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         });
     }
 
-    function swap(doc) {
+    function swap(doc, regions = REGIONS) {
         const open = openGroups();
         window.Alpine.mutateDom(() => {
-            REGIONS.forEach((id) => {
+            regions.forEach((id) => {
                 const current = document.getElementById(id);
                 const next = doc.getElementById(id);
                 window.Alpine.destroyTree(current);
@@ -127,7 +130,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             });
             reopen(open);
         });
-        REGIONS.forEach((id) => window.Alpine.initTree(document.getElementById(id)));
+        regions.forEach((id) => window.Alpine.initTree(document.getElementById(id)));
         // Hyvä fills form keys (add to cart, compare) on page load only.
         if (window.hyva && typeof window.hyva.initFormKey === 'function') {
             window.hyva.initFormKey();
@@ -213,6 +216,10 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
     }
 
     async function navigate(url, options = {}) {
+        if (drawer && !options.apply) {
+            stage(url, options);
+            return;
+        }
         if (controller) {
             controller.abort();
         }
@@ -232,7 +239,9 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             if (!doc) {
                 throw new Error('OpenFilter: regions missing');
             }
-            if (options.push !== false) {
+            if (options.replace) {
+                history.replaceState({openFilter: true}, '', entry.url);
+            } else if (options.push !== false) {
                 history.replaceState(Object.assign({}, history.state, {openFilter: true, scroll: window.scrollY}), '');
                 history.pushState({openFilter: true}, '', entry.url);
             }
@@ -257,6 +266,122 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
                 region.classList.remove('of-loading');
                 region.removeAttribute('aria-busy');
             }
+        }
+    }
+
+    // Mobile drawer (08 §3, 10 FE8): the filter dialog as a modal; changes are staged and prefetched, so "Show N
+    // products" knows N and Apply swaps the prefetched page without another request.
+    const byId = (id) => document.getElementById(id);
+
+    function footer(count) {
+        const dialog = byId('of-drawer');
+        const apply = dialog.querySelector('[data-of-drawer-apply]');
+        apply.textContent = count === '1' ? dialog.dataset.ofShowOne : dialog.dataset.ofShow.replace('%1', count);
+    }
+
+    function openDrawer() {
+        const dialog = byId('of-drawer');
+        if (!dialog || drawer || typeof dialog.showModal !== 'function') {
+            return;
+        }
+        const state = byId('of-state');
+        drawer = {snapshot: [...byId('of-filters').childNodes].map((node) => node.cloneNode(true)), url: location.href};
+        dialog.close();
+        dialog.setAttribute('data-of-modal', '');
+        dialog.showModal();
+        document.documentElement.classList.add('of-locked');
+        footer(state.dataset.ofCount);
+        dialog.querySelector('[data-of-drawer-clear]').href = state.dataset.ofClearUrl;
+        history.pushState(Object.assign({}, history.state, {drawer: true}), '');
+    }
+
+    function closeDrawer(restore, fromHistory) {
+        const dialog = byId('of-drawer');
+        if (!drawer) {
+            return;
+        }
+        drawer = null;
+        clearTimeout(stageTimer);
+        if (restore) {
+            byId('of-filters').replaceChildren(...restore);
+            paintSliders();
+        }
+        dialog.close();
+        dialog.removeAttribute('data-of-modal');
+        dialog.show();
+        document.documentElement.classList.remove('of-locked');
+        if (!fromHistory && history.state && history.state.drawer) {
+            ignorePop = true;
+            history.back();
+        }
+        const toggle = document.querySelector('[data-of-drawer-open]');
+        if (restore && toggle) {
+            toggle.focus();
+        }
+    }
+
+    function stage(url, options) {
+        const apply = byId('of-drawer').querySelector('[data-of-drawer-apply]');
+        clearTimeout(stageTimer);
+        apply.setAttribute('aria-busy', 'true');
+        drawer.pending = new Promise((resolve) => {
+            stageTimer = setTimeout(async () => {
+                if (controller) {
+                    controller.abort();
+                }
+                controller = new AbortController();
+                try {
+                    const entry = await load(url, controller.signal);
+                    const doc = parse(entry.html);
+                    if (doc && drawer) {
+                        drawer.staged = entry.url;
+                        swap(doc, ['of-filters']);
+                        paintSliders();
+                        footer(doc.getElementById('of-state').dataset.ofCount);
+                        focus(options);
+                    }
+                } catch (error) {
+                    if (error.name !== 'AbortError' && drawer) {
+                        drawer.staged = url;
+                    }
+                }
+                apply.removeAttribute('aria-busy');
+                resolve();
+            }, 250);
+        });
+    }
+
+    async function applyDrawer() {
+        const state = drawer;
+        if (!state) {
+            return;
+        }
+        await state.pending;
+        closeDrawer(null, true);
+        if (state.staged && state.staged !== state.url) {
+            navigate(state.staged, {apply: true, replace: true, focus: 'results'});
+        } else if (history.state && history.state.drawer) {
+            ignorePop = true;
+            history.back();
+        }
+    }
+
+    function onDrawer(event) {
+        const control = event.target.closest &&
+            event.target.closest('[data-of-drawer-open],[data-of-drawer-close],[data-of-drawer-apply],[data-of-drawer-clear]');
+        if (control) {
+            event.preventDefault();
+            if (control.hasAttribute('data-of-drawer-open')) {
+                openDrawer();
+            } else if (control.hasAttribute('data-of-drawer-apply')) {
+                applyDrawer();
+            } else if (control.hasAttribute('data-of-drawer-clear')) {
+                stage(control.href, {focus: 'none'});
+            } else {
+                closeDrawer(drawer && drawer.snapshot);
+            }
+        } else if (drawer && event.target.id === 'of-drawer') {
+            closeDrawer(drawer.snapshot); // the backdrop
         }
     }
 
@@ -440,6 +565,14 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
     }
 
     function onPopState(event) {
+        if (ignorePop) {
+            ignorePop = false;
+            return;
+        }
+        if (drawer) {
+            closeDrawer(drawer.snapshot, true); // Back closes the drawer first
+            return;
+        }
         if (event.state && event.state.openFilter) {
             navigate(location.href, {push: false, focus: 'none', scroll: event.state.scroll || 0});
         }
@@ -453,7 +586,14 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         live = root;
         document.querySelectorAll('script:not([src])').forEach((script) => ran.add(script.textContent));
         history.replaceState(Object.assign({}, history.state, {openFilter: true}), '');
+        document.addEventListener('click', onDrawer);
         document.addEventListener('click', onClick);
+        document.addEventListener('cancel', (event) => {
+            if (drawer && event.target.id === 'of-drawer') {
+                event.preventDefault();
+                closeDrawer(drawer.snapshot);
+            }
+        }, true);
         document.addEventListener('click', adoptToolbar, true);
         document.addEventListener('change', adoptToolbar, true);
         document.addEventListener('input', onSearch);
