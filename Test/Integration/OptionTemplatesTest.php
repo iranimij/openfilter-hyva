@@ -85,6 +85,29 @@ class OptionTemplatesTest extends HyvaPageTestCase
         self::assertMatchesRegularExpression('#<input type="search" class="of-search__input" data-of-search#', $group);
     }
 
+    public function testPriceSliderIsAGetFormThatKeepsTheOtherFilters(): void
+    {
+        $group = $this->group($this->page([M1Catalog::COLOR => 'red', 'price' => '20-40']), 'price');
+
+        self::assertMatchesRegularExpression('#<form class="of-slider of-slider--js" method="get" action="[^"?]+"#', $group);
+        self::assertMatchesRegularExpression('#<input type="hidden" name="' . M1Catalog::COLOR . '"\s+value="red">#', $group);
+        self::assertMatchesRegularExpression('#name="price_from"[^>]*value="20"#', $group);
+        self::assertMatchesRegularExpression('#name="price_to"[^>]*value="40"#', $group);
+        self::assertSame(2, substr_count($group, 'type="range"'));
+        self::assertMatchesRegularExpression('#data-of-url="[^"]*price=999999901-999999902#', $group);
+    }
+
+    public function testWithoutTheAjaxComponentTheSliderKeepsOnlyTheFormAndApply(): void
+    {
+        $this->config(\Iranimij\OpenFilter\Model\Config::XML_PATH_AJAX, '0');
+
+        $group = $this->group($this->page([]), 'price');
+
+        self::assertStringContainsString('<form class="of-slider" method="get"', $group);
+        self::assertStringNotContainsString('type="range"', $group);
+        self::assertStringContainsString('class="of-slider__apply"', $group);
+    }
+
     /**
      * Makes the test colour a visual swatch attribute (or a plain select again with null).
      */

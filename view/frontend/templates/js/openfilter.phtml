@@ -37,6 +37,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
     const REGIONS = ['of-filters', 'of-state', 'of-results'];
     const HEAD = ['meta[name="robots"]', 'link[rel="canonical"]', 'link[rel="prev"]', 'link[rel="next"]'];
     const CACHE_SIZE = 10;
+    const RANGE = '999999901-999999902'; // Slider::PLACEHOLDER (core view model)
     const cache = new Map();
     const ran = new Set();
     let controller = null;
@@ -170,9 +171,10 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
     function focus(options) {
         if (options.focus === 'option' && options.group) {
             const group = document.querySelector('#of-filters [data-of-group="' + CSS.escape(options.group) + '"]');
-            const link = group && group.querySelector('[data-of-value="' + CSS.escape(options.value || '') + '"]');
-            if (link) {
-                link.focus({preventScroll: true});
+            const target = group && group.querySelector(options.control ||
+                '[data-of-value="' + CSS.escape(options.value || '') + '"]');
+            if (target) {
+                target.focus({preventScroll: true});
                 return;
             }
         }
@@ -236,6 +238,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             }
             swap(doc);
             syncHead(doc);
+            paintSliders();
             performance.mark('of:swap-end');
             performance.measure('of:swap', 'of:swap-start', 'of:swap-end');
             announce();
@@ -254,6 +257,107 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
                 region.classList.remove('of-loading');
                 region.removeAttribute('aria-busy');
             }
+        }
+    }
+
+    // Range sliders (10 FE7): two range inputs on one track and two number fields, applied on release.
+    const sliderPart = (form, role) => ({
+        range: form.querySelector('[data-of-range="' + role + '"]'),
+        number: form.querySelector('[data-of-number="' + role + '"]')
+    });
+    const round = (value) => String(Math.round(value * 100) / 100);
+
+    function formatValue(form, value) {
+        try {
+            const currency = form.dataset.ofCurrency;
+            return new Intl.NumberFormat(form.dataset.ofLocale || undefined, currency
+                ? {style: 'currency', currency, maximumFractionDigits: 2}
+                : {maximumFractionDigits: 2}).format(value);
+        } catch (e) {
+            return round(value);
+        }
+    }
+
+    function paint(form) {
+        const from = sliderPart(form, 'from').range;
+        const to = sliderPart(form, 'to').range;
+        if (!from || !to) {
+            return;
+        }
+        const min = Number(from.min);
+        const span = Number(from.max) - min || 1;
+        form.style.setProperty('--of-from', ((Number(from.value) - min) / span * 100) + '%');
+        form.style.setProperty('--of-to', ((Number(to.value) - min) / span * 100) + '%');
+        const output = form.querySelector('[data-of-output]');
+        if (output) {
+            output.textContent = formatValue(form, Number(from.value)) + ' – ' + formatValue(form, Number(to.value));
+        }
+    }
+
+    function paintSliders() {
+        document.querySelectorAll('#of-filters [data-of-slider]').forEach(paint);
+    }
+
+    function applySlider(form, control) {
+        const from = sliderPart(form, 'from').number;
+        const to = sliderPart(form, 'to').number;
+        const min = Number(from.min);
+        const max = Number(from.max);
+        const low = Math.max(min, Math.min(Number(from.value), Number(to.value)));
+        const high = Math.min(max, Math.max(Number(from.value), Number(to.value)));
+        const group = form.closest('[data-of-group]');
+        navigate(low <= min && high >= max ? form.dataset.ofClear : form.dataset.ofUrl.replace(RANGE, round(low) + '-' +
+            round(high)), {focus: 'option', group: group && group.dataset.ofGroup, control});
+    }
+
+    let sliderTimer = 0;
+
+    function onSlider(event) {
+        const input = event.target;
+        const form = input.closest && input.closest('[data-of-slider]');
+        const role = form && (input.dataset.ofRange || input.dataset.ofNumber);
+        if (!role) {
+            return;
+        }
+        const own = sliderPart(form, role);
+        const other = sliderPart(form, role === 'from' ? 'to' : 'from');
+        if (input === own.range && other.range) {
+            const value = Number(input.value);
+            const limit = Number(other.range.value);
+            if (role === 'from' ? value > limit : value < limit) {
+                input.value = String(limit);
+            }
+            own.number.value = input.value;
+        } else if (input === own.number && own.range) {
+            own.range.value = input.value;
+        }
+        paint(form);
+        if (event.type === 'change') {
+            clearTimeout(sliderTimer);
+            const control = input.dataset.ofRange ? '[data-of-range="' + role + '"]' : '[data-of-number="' + role + '"]';
+            sliderTimer = setTimeout(() => applySlider(form, control), 300);
+        }
+    }
+
+    function onSliderKey(event) {
+        const input = event.target;
+        if (!input.dataset || !input.dataset.ofRange || (event.key !== 'PageUp' && event.key !== 'PageDown')) {
+            return;
+        }
+        event.preventDefault();
+        const step = Number(input.step) || 1;
+        const value = Number(input.value) + (event.key === 'PageUp' ? 10 : -10) * step;
+        input.value = String(Math.min(Number(input.max), Math.max(Number(input.min), value)));
+        input.dispatchEvent(new Event('input', {bubbles: true}));
+        input.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+
+    function onSliderSubmit(event) {
+        const form = event.target.closest && event.target.closest('[data-of-slider]');
+        if (form) {
+            event.preventDefault();
+            clearTimeout(sliderTimer);
+            applySlider(form, '[data-of-number="to"]');
         }
     }
 
@@ -353,6 +457,11 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         document.addEventListener('click', adoptToolbar, true);
         document.addEventListener('change', adoptToolbar, true);
         document.addEventListener('input', onSearch);
+        document.addEventListener('input', onSlider);
+        document.addEventListener('change', onSlider);
+        document.addEventListener('keydown', onSliderKey);
+        document.addEventListener('submit', onSliderSubmit);
+        paintSliders();
         window.addEventListener('popstate', onPopState);
         // Each history entry keeps its own scroll position, so Back and Forward restore it after the swap.
         let saving = 0;

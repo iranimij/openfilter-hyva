@@ -10,6 +10,7 @@ use Hyva\Theme\Model\ViewModelRegistry;
 use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
 use Iranimij\OpenFilter\ViewModel\Data\FilterOption;
 use Iranimij\OpenFilter\ViewModel\Swatch;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
 use Magento\Framework\Escaper;
 use Magento\Framework\View\Element\Template;
 
@@ -48,7 +49,7 @@ $renderOption = static function (FilterOption $option) use ($escaper, $swatches)
         . '<span class="of-sr"> ' . $escaper->escapeHtml(__('products')) . '</span></span></a></li>';
 };
 ?>
-<?php if ($group->isSearchable()): ?>
+<?php if ($group->isSearchable() && $viewModels->require(Ajax::class)->isEnabled()): ?>
     <div class="of-search">
         <input type="search" class="of-search__input" data-of-search
                aria-label="<?= $escaper->escapeHtmlAttr(__('Search %1 options', $group->getLabel())) ?>"

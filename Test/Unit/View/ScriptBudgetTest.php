@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace Iranimij\OpenFilterHyva\Test\Unit\View;
 
+use Iranimij\OpenFilter\ViewModel\Slider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -33,6 +34,11 @@ class ScriptBudgetTest extends TestCase
 
         self::assertStringNotContainsString('<?', $script, 'no PHP inside the script');
         self::assertDoesNotMatchRegularExpression('/\beval\s*\(|new Function|setTimeout\(\s*[\'"]|innerHTML\s*=/', $script);
+    }
+
+    public function testSliderPlaceholderMatchesTheCoreViewModel(): void
+    {
+        self::assertStringContainsString("'" . Slider::PLACEHOLDER . "'", $this->script());
     }
 
     public function testStaysWithinTheBudget(): void

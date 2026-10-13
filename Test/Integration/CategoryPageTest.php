@@ -39,7 +39,7 @@ class CategoryPageTest extends HyvaPageTestCase
         $this->config(Config::XML_PATH_EXPANDED_GROUPS, '1');
         $filters = $this->region($this->page([]), 'of-filters');
 
-        self::assertSame(3, substr_count($filters, '<details class="of-group'), 'colour, size, material');
+        self::assertSame(5, substr_count($filters, '<details class="of-group'), 'colour, size, material, price, width');
         foreach (array_keys(M1Catalog::OPTIONS) as $code) {
             self::assertMatchesRegularExpression(
                 '#data-of-group="' . $code . '".*?<a class="of-option[^"]*"\s+href="[^"]*[?&]' . $code . '=#s',
@@ -49,7 +49,7 @@ class CategoryPageTest extends HyvaPageTestCase
         }
         preg_match_all('#<details class="of-group[^>]*>#', $filters, $groups);
         self::assertSame(
-            [true, false, false],
+            [true, false, false, false, false],
             array_map(static fn ($tag) => str_contains($tag, ' open'), $groups[0]),
             'first group open, the others closed but still carrying their links'
         );

@@ -1,0 +1,91 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * Price and decimal ranges (10 FE7): a GET form with two number fields and an Apply button that works without
+ * JavaScript (the URL normaliser folds <param>_from / <param>_to into <param>=from-to), enhanced by the AJAX
+ * component into two stacked range inputs on one track (arrows: one step, Page Up / Page Down: ten steps; applied
+ * on release). Display mode "from_to" keeps the number fields only.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ */
+/** @var FilterGroup $group */
+$group = $block->getData('group');
+$groupId = (string) $block->getData('group_id');
+$slider = $group->getSlider();
+if ($slider === null) {
+    return;
+}
+$number = static fn (float $value): string => rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
+$from = $slider->getFrom() ?? $slider->getMin();
+$to = $slider->getTo() ?? $slider->getMax();
+$ajax = $viewModels->require(Ajax::class)->isEnabled();
+$withRange = $ajax && $group->getDisplay() !== 'from_to';
+$caption = static fn ($text): string => $slider->getCurrency() ? $text . ' (' . $slider->getCurrency() . ')' : (string) $text;
+?>
+<form class="of-slider<?= $ajax ? ' of-slider--js' : '' ?>" method="get" action="<?= $escaper->escapeUrl($slider->getAction()) ?>" data-of-slider
+      data-of-url="<?= $escaper->escapeUrl($slider->getUrlTemplate()) ?>"
+      data-of-clear="<?= $escaper->escapeUrl($slider->getClearUrl()) ?>"
+      data-of-currency="<?= $escaper->escapeHtmlAttr((string) $slider->getCurrency()) ?>"
+      data-of-locale="<?= $escaper->escapeHtmlAttr($slider->getLocale()) ?>"
+      aria-labelledby="<?= $escaper->escapeHtmlAttr($groupId) ?>-title">
+    <?php foreach ($slider->getHiddenFields() as $name => $value): ?>
+        <input type="hidden" name="<?= $escaper->escapeHtmlAttr($name) ?>"
+               value="<?= $escaper->escapeHtmlAttr($value) ?>">
+    <?php endforeach; ?>
+    <?php if ($withRange): ?>
+        <div class="of-slider__ranges">
+            <div class="of-slider__track" aria-hidden="true"><span class="of-slider__fill"></span></div>
+            <input type="range" class="of-slider__range" data-of-range="from"
+                   min="<?= $escaper->escapeHtmlAttr($number($slider->getMin())) ?>"
+                   max="<?= $escaper->escapeHtmlAttr($number($slider->getMax())) ?>"
+                   step="<?= $escaper->escapeHtmlAttr($number($slider->getStep())) ?>"
+                   value="<?= $escaper->escapeHtmlAttr($number($from)) ?>"
+                   aria-label="<?= $escaper->escapeHtmlAttr(__('Minimum %1', $group->getLabel())) ?>">
+            <input type="range" class="of-slider__range" data-of-range="to"
+                   min="<?= $escaper->escapeHtmlAttr($number($slider->getMin())) ?>"
+                   max="<?= $escaper->escapeHtmlAttr($number($slider->getMax())) ?>"
+                   step="<?= $escaper->escapeHtmlAttr($number($slider->getStep())) ?>"
+                   value="<?= $escaper->escapeHtmlAttr($number($to)) ?>"
+                   aria-label="<?= $escaper->escapeHtmlAttr(__('Maximum %1', $group->getLabel())) ?>">
+        </div>
+    <?php endif; ?>
+    <div class="of-slider__fields">
+        <label class="of-slider__field">
+            <span class="of-slider__caption"><?= $escaper->escapeHtml($caption(__('From'))) ?></span>
+            <input type="number" class="of-slider__number" data-of-number="from" inputmode="decimal"
+                   name="<?= $escaper->escapeHtmlAttr($slider->getFromField()) ?>"
+                   min="<?= $escaper->escapeHtmlAttr($number($slider->getMin())) ?>"
+                   max="<?= $escaper->escapeHtmlAttr($number($slider->getMax())) ?>"
+                   step="<?= $escaper->escapeHtmlAttr($number($slider->getStep())) ?>"
+                   value="<?= $escaper->escapeHtmlAttr($number($from)) ?>">
+        </label>
+        <span class="of-slider__dash" aria-hidden="true">–</span>
+        <label class="of-slider__field">
+            <span class="of-slider__caption"><?= $escaper->escapeHtml($caption(__('To'))) ?></span>
+            <input type="number" class="of-slider__number" data-of-number="to" inputmode="decimal"
+                   name="<?= $escaper->escapeHtmlAttr($slider->getToField()) ?>"
+                   min="<?= $escaper->escapeHtmlAttr($number($slider->getMin())) ?>"
+                   max="<?= $escaper->escapeHtmlAttr($number($slider->getMax())) ?>"
+                   step="<?= $escaper->escapeHtmlAttr($number($slider->getStep())) ?>"
+                   value="<?= $escaper->escapeHtmlAttr($number($to)) ?>">
+        </label>
+    </div>
+    <?php if ($withRange): ?>
+        <output class="of-slider__output" data-of-output aria-hidden="true"></output>
+    <?php endif; ?>
+    <button type="submit" class="of-slider__apply"><?= $escaper->escapeHtml(__('Apply')) ?></button>
+</form>

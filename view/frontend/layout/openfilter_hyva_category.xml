@@ -29,6 +29,10 @@ results) and #of-results (a container around the product list block, so empty re
                        template="Iranimij_OpenFilterHyva::layer/filter/toggle.phtml"/>
                 <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.category" as="category"
                        template="Iranimij_OpenFilterHyva::layer/filter/category.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.slider" as="slider"
+                       template="Iranimij_OpenFilterHyva::layer/filter/slider.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.from_to" as="from_to"
+                       template="Iranimij_OpenFilterHyva::layer/filter/slider.phtml"/>
             </block>
         </referenceBlock>
         <referenceBlock name="catalog.navigation.state">
