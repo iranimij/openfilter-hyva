@@ -64,6 +64,27 @@ class CategoryPageTest extends HyvaPageTestCase
         self::assertMatchesRegularExpression('#class="of-clear" href="[^"?]*"#', $html, 'Clear All drops every filter');
     }
 
+    public function testOptionLinksStayFollowableBelowTheNofollowThreshold(): void
+    {
+        $this->config(Config::XML_PATH_NOFOLLOW_THRESHOLD, '2');
+        $filters = $this->region($this->page([M1Catalog::COLOR => 'red']), 'of-filters');
+
+        self::assertStringNotContainsString('rel="nofollow"', $filters, 'one active value: links stay followable');
+    }
+
+    public function testOptionLinksAskCrawlersNotToFollowFromTheThreshold(): void
+    {
+        $this->config(Config::XML_PATH_NOFOLLOW_THRESHOLD, '2');
+        $filters = $this->region($this->page([M1Catalog::COLOR => 'red,blue']), 'of-filters');
+
+        self::assertMatchesRegularExpression('#<a class="of-option"[^>]*rel="nofollow"#s', $filters, 'adding a third value');
+        self::assertDoesNotMatchRegularExpression(
+            '#<a class="of-option of-option--selected"[^>]*rel="nofollow"#s',
+            $filters,
+            'links that remove a value stay followable'
+        );
+    }
+
     public function testRegionsCarryNoInlineStylesOrHandlers(): void
     {
         $html = $this->page([M1Catalog::COLOR => 'red']);
