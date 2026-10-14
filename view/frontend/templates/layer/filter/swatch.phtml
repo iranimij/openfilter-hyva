@@ -9,6 +9,7 @@ declare(strict_types=1);
 use Hyva\Theme\Model\ViewModelRegistry;
 use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
 use Iranimij\OpenFilter\ViewModel\Data\FilterOption;
+use Iranimij\OpenFilter\ViewModel\Debug;
 use Iranimij\OpenFilter\ViewModel\Swatch;
 use Iranimij\OpenFilterHyva\ViewModel\Ajax;
 use Magento\Framework\Escaper;
@@ -26,7 +27,8 @@ use Magento\Framework\View\Element\Template;
 $group = $block->getData('group');
 $groupId = (string) $block->getData('group_id');
 $swatches = $viewModels->require(Swatch::class)->forGroup($group);
-$renderOption = static function (FilterOption $option) use ($escaper, $swatches): string {
+$debug = $viewModels->require(Debug::class);
+$renderOption = static function (FilterOption $option) use ($escaper, $swatches, $debug): string {
     $selected = $option->isSelected();
     $swatch = $swatches[$option->getValue()] ?? ['type' => Swatch::TEXT, 'value' => $option->getLabel()];
     if ($swatch['type'] === Swatch::COLOR) {
@@ -43,7 +45,8 @@ $renderOption = static function (FilterOption $option) use ($escaper, $swatches)
         . '" href="' . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
         . $escaper->escapeHtmlAttr($option->getValue()) . '"'
         . ($selected ? ' aria-current="true"' : '')
-        . ($option->getRel() !== '' ? ' rel="' . $escaper->escapeHtmlAttr($option->getRel()) . '"' : '') . '>' . $visual
+        . ($option->getRel() !== '' ? ' rel="' . $escaper->escapeHtmlAttr($option->getRel()) . '"' : '')
+        . $debug->option($option) . '>' . $visual
         . '<span class="of-swatch__label">' . $escaper->escapeHtml($option->getLabel()) . '</span>'
         . ($selected ? '<span class="of-sr">' . $escaper->escapeHtml(__('selected')) . '</span>' : '')
         . '<span class="of-swatch__count">' . $option->getCount()

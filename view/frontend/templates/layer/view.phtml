@@ -7,6 +7,7 @@
 declare(strict_types=1);
 
 use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilter\ViewModel\Debug;
 use Iranimij\OpenFilter\ViewModel\FilterBlock;
 use Iranimij\OpenFilterHyva\ViewModel\Ajax;
 use Magento\Framework\Escaper;
@@ -26,6 +27,7 @@ $filterBlock = $viewModels->require(FilterBlock::class);
 $groups = $block->canShowBlock() ? $filterBlock->groups($block->getFilters()) : [];
 $renderer = $block->getChildBlock('of_group');
 $ajax = $viewModels->require(Ajax::class)->isEnabled();
+$debug = $viewModels->require(Debug::class);
 ?>
 <dialog id="of-drawer" class="of-drawer<?= $ajax ? ' of-drawer--js' : '' ?>" open aria-labelledby="of-filters-title"
         data-of-show="<?= $escaper->escapeHtmlAttr(__('Show %1 products', '%1')) ?>"
@@ -37,7 +39,7 @@ $ajax = $viewModels->require(Ajax::class)->isEnabled();
                     aria-label="<?= $escaper->escapeHtmlAttr(__('Close filters')) ?>">×</button>
         </div>
     <?php endif; ?>
-    <div id="of-filters" class="of-filters" data-of-region="filters">
+    <div id="of-filters" class="of-filters" data-of-region="filters"<?= /* @noEscape */ $debug->region() ?>>
     <?php if ($groups !== [] && $renderer): ?>
         <nav class="of-filters__nav" aria-labelledby="of-filters-title">
             <h2 id="of-filters-title" class="of-filters__title"><?= $escaper->escapeHtml(__('Shop By')) ?></h2>

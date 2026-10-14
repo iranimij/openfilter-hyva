@@ -6,7 +6,9 @@
 
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
 use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Iranimij\OpenFilter\ViewModel\Debug;
 use Magento\Framework\Escaper;
 use Magento\Framework\View\Element\Template;
 
@@ -16,7 +18,9 @@ use Magento\Framework\View\Element\Template;
  *
  * @var Template $block
  * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
  */
+$debug = $viewModels->require(Debug::class);
 /** @var FilterGroup $group */
 $group = $block->getData('group');
 $groupId = (string) $block->getData('group_id');
@@ -30,7 +34,8 @@ $options = array_filter($group->getOptions(), static fn ($option): bool => $opti
                href="<?= $escaper->escapeUrl($option->getUrl()) ?>" data-of-link
                data-of-value="<?= $escaper->escapeHtmlAttr($option->getValue()) ?>"
                 <?= $option->isSelected() ? 'aria-current="true"' : '' ?>
-                <?= $option->getRel() !== '' ? 'rel="' . $escaper->escapeHtmlAttr($option->getRel()) . '"' : '' ?>>
+                <?= $option->getRel() !== '' ? 'rel="' . $escaper->escapeHtmlAttr($option->getRel()) . '"' : '' ?>
+                <?= /* @noEscape */ $debug->option($option) ?>>
                 <span class="of-toggle__switch" aria-hidden="true"></span>
                 <span class="of-option__label"><?= $escaper->escapeHtml($option->getLabel()) ?></span>
                 <span class="of-sr"><?= $escaper->escapeHtml($option->isSelected() ? __('on') : __('off')) ?></span>

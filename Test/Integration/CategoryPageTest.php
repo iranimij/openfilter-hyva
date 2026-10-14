@@ -10,6 +10,8 @@ namespace Iranimij\OpenFilterHyva\Test\Integration;
 
 use Iranimij\OpenFilter\Model\Config;
 use Iranimij\OpenFilter\Test\Integration\Catalog\M1Catalog;
+use Magento\Framework\App\Config\MutableScopeConfigInterface;
+use Magento\TestFramework\Helper\Bootstrap;
 
 /**
  * A layered category page on Hyvä with OpenFilter's templates: the three regions, a real link for every option
@@ -83,6 +85,28 @@ class CategoryPageTest extends HyvaPageTestCase
             $filters,
             'links that remove a value stay followable'
         );
+    }
+
+    public function testNoDebugAttributesOutsideDebugMode(): void
+    {
+        self::assertStringNotContainsString('data-of-debug-', $this->page([M1Catalog::COLOR => 'red']));
+    }
+
+    public function testDebugModeShowsTheServerDecisionsOnTheMarkup(): void
+    {
+        Bootstrap::getObjectManager()->get(MutableScopeConfigInterface::class)
+            ->setValue(Config::XML_PATH_DEBUG, '1', 'default'); // a global setting
+        $filters = $this->region($this->page([M1Catalog::COLOR => 'red']), 'of-filters');
+
+        self::assertMatchesRegularExpression(
+            '#id="of-filters"[^>]*data-of-debug-strategy="(single_query|per_attribute)"[^>]*data-of-debug-values="1"#',
+            $filters
+        );
+        self::assertMatchesRegularExpression(
+            '#data-of-group="' . M1Catalog::COLOR . '"[^>]*data-of-debug-filter="' . M1Catalog::COLOR . '"#s',
+            $filters
+        );
+        self::assertMatchesRegularExpression('#<a class="of-option[^>]*data-of-debug-option="\d+" data-of-debug-count="\d+"#s', $filters);
     }
 
     public function testRegionsCarryNoInlineStylesOrHandlers(): void
