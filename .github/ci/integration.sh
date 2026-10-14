@@ -38,6 +38,11 @@ if [ "$SEARCH_ENGINE" = elasticsearch8 ] && ! grep -q '"magento/module-elasticse
     $c["replace"] = ($c["replace"] ?? []) + ["magento/module-elasticsearch-7" => "*"];
     file_put_contents($f, json_encode($c, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");'
   composer require --no-update --no-interaction "magento/module-elasticsearch-8:^101.0"
+  # 2.4.7 sorts on _id, which Elasticsearch 8 refuses unless this cluster setting is on (Adobe's 2.4.7 + ES8 note);
+  # without it every catalog search fails and the adapter returns empty results.
+  curl -fsS -XPUT 'localhost:9200/_cluster/settings' -H 'Content-Type: application/json' \
+    -d '{"persistent":{"indices.id_field_data.enabled":true}}'
+  echo
 fi
 # Composer 2.9 blocks packages with security advisories during resolution; 2.4.7 pins league/flysystem 2.x, so the
 # test project could not be built at all. This only affects the throwaway CI project, never a shop.
