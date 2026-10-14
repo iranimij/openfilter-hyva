@@ -39,6 +39,14 @@ $debug = $viewModels->require(Debug::class);
         <?php endif; ?>
     </summary>
     <div class="of-group__body" id="<?= $escaper->escapeHtmlAttr($id) ?>">
+        <?php if ($group->isMatchAll() || $group->getTooltip() !== null): ?>
+            <p class="of-group__hint">
+                <?php if ($group->isMatchAll()): ?>
+                    <span class="of-group__match"><?= $escaper->escapeHtml(__('Products have all picked values.')) ?></span>
+                <?php endif; ?>
+                <?= $escaper->escapeHtml((string) $group->getTooltip()) ?>
+            </p>
+        <?php endif; ?>
         <?= /* @noEscape */ $options ? $options->setData('group', $group)->setData('group_id', $id)->toHtml() : '' ?>
     </div>
 </details>

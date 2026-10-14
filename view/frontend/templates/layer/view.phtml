@@ -7,6 +7,7 @@
 declare(strict_types=1);
 
 use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilter\Model\Config;
 use Iranimij\OpenFilter\ViewModel\Debug;
 use Iranimij\OpenFilter\ViewModel\FilterBlock;
 use Iranimij\OpenFilterHyva\ViewModel\Ajax;
@@ -29,7 +30,21 @@ $renderer = $block->getChildBlock('of_group');
 $ajax = $viewModels->require(Ajax::class)->isEnabled();
 $debug = $viewModels->require(Debug::class);
 ?>
-<dialog id="of-drawer" class="of-drawer<?= $ajax ? ' of-drawer--js' : '' ?>" open aria-labelledby="of-filters-title"
+<?php
+// Fixed class names: printed as they are, so the 1.0 markup stays the same ("of-drawer of-drawer--js").
+$classes = ['of-drawer'];
+if ($ajax) {
+    $classes[] = 'of-drawer--js';
+}
+if ($filterBlock->layout() === Config::LAYOUT_HORIZONTAL) {
+    $classes[] = 'of-drawer--horizontal';
+}
+if ($filterBlock->isSticky()) {
+    $classes[] = 'of-drawer--sticky';
+}
+$applyButton = $ajax && $filterBlock->applyMode() === Config::APPLY_BUTTON;
+?>
+<dialog id="of-drawer" class="<?= /* @noEscape */ implode(' ', $classes) ?>" open aria-labelledby="of-filters-title"
         data-of-show="<?= $escaper->escapeHtmlAttr(__('Show %1 products', '%1')) ?>"
         data-of-show-one="<?= $escaper->escapeHtmlAttr(__('Show 1 product')) ?>">
     <?php if ($ajax): ?>
@@ -52,6 +67,13 @@ $debug = $viewModels->require(Debug::class);
         </nav>
     <?php endif; ?>
     </div>
+    <?php if ($applyButton): ?>
+        <?php /* Desktop apply mode (1.1, js/extras.phtml): staged filters, then one swap. */ ?>
+        <div class="of-apply" data-of-apply-bar hidden>
+            <a class="of-apply__reset" href="#" data-of-apply-reset><?= $escaper->escapeHtml(__('Reset')) ?></a>
+            <button type="button" class="of-apply__show" data-of-apply-show></button>
+        </div>
+    <?php endif; ?>
     <?php if ($ajax): ?>
         <div class="of-drawer__foot">
             <a class="of-drawer__clear" href="#" data-of-drawer-clear><?= $escaper->escapeHtml(__('Clear all')) ?></a>

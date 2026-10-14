@@ -1,0 +1,44 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * Dropdown display (1.1): one value from a native select in a GET form, so it works without JavaScript (the button
+ * sends the form; the option id is turned into the canonical URL by a 301). With JavaScript (js/extras.phtml) a
+ * change loads the result in place and the button is hidden.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ */
+/** @var FilterGroup $group */
+$group = $block->getData('group');
+$groupId = (string) $block->getData('group_id');
+$form = $group->getForm();
+if ($form === null) {
+    return;
+}
+?>
+<form class="of-dropdown" method="get" action="<?= $escaper->escapeUrl($form->getAction()) ?>">
+    <?php foreach ($form->getFields() as $name => $value): ?>
+        <input type="hidden" name="<?= $escaper->escapeHtmlAttr($name) ?>" value="<?= $escaper->escapeHtmlAttr($value) ?>">
+    <?php endforeach; ?>
+    <label class="of-sr" for="<?= $escaper->escapeHtmlAttr($groupId) ?>-select"><?= $escaper->escapeHtml($group->getLabel()) ?></label>
+    <select class="of-dropdown__select" id="<?= $escaper->escapeHtmlAttr($groupId) ?>-select"
+            name="<?= $escaper->escapeHtmlAttr($form->getParam()) ?>" data-of-dropdown-select>
+        <option value=""><?= $escaper->escapeHtml(__('All')) ?></option>
+        <?php foreach ($group->getOptions() as $option): ?>
+            <option value="<?= $escaper->escapeHtmlAttr($option->getValue()) ?>"<?= $option->isSelected() ? ' selected' : '' ?>>
+                <?= $escaper->escapeHtml(__('%1 (%2)', $option->getLabel(), $option->getCount())) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+    <button type="submit" class="of-dropdown__go"><?= $escaper->escapeHtml(__('Apply')) ?></button>
+</form>

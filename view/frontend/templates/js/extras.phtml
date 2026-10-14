@@ -1,0 +1,190 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * OpenFilter 1.1 extras, printed only where a store view uses them (ViewModel\Ajax::needsExtras()), after the main
+ * component (js/openfilter.phtml), whose functions it uses through window.openFilter:
+ * - desktop apply mode: filter clicks are staged and prefetched; "Show N products" swaps the prefetched page, Reset
+ *   puts the filters back; phones keep the drawer (it stages on its own);
+ * - dropdowns: a change loads the dropdown's GET form result like a link (without JavaScript the form's button does);
+ * - horizontal bar: one group popover open at a time; Escape or a click outside closes it (focus back on its title).
+ * A swap made elsewhere (a chip, the pager, Back) ends staging; after a swap the keyboard stays on the dropdown.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ * @var HyvaCsp $hyvaCsp
+ */
+if (!$viewModels->require(Ajax::class)->needsExtras()) {
+    return;
+}
+?>
+<script>
+(() => {
+    'use strict';
+    const of = () => window.openFilter;
+    const byId = (id) => document.getElementById(id);
+    let staged = null;
+    let timer = 0;
+    let controller = null;
+
+    function bar() {
+        return document.querySelector('[data-of-apply-bar]');
+    }
+
+    function label(count) {
+        const dialog = byId('of-drawer');
+        return count === '1' ? dialog.dataset.ofShowOne : dialog.dataset.ofShow.replace('%1', count);
+    }
+
+    function hide() {
+        staged = null;
+        clearTimeout(timer);
+        if (bar()) {
+            bar().hidden = true;
+            bar().querySelector('[data-of-apply-show]').textContent = '';
+        }
+    }
+
+    function focusDropdown(key) {
+        const select = key && document.querySelector('[data-of-group="' + CSS.escape(key) + '"] [data-of-dropdown-select]');
+        if (select) {
+            select.focus();
+        }
+    }
+
+    window.openFilterStage = (url, options) => {
+        const apply = bar();
+        if (!apply || !of() || byId('of-drawer').hasAttribute('data-of-modal')) {
+            return false;
+        }
+        const show = apply.querySelector('[data-of-apply-show]');
+        clearTimeout(timer);
+        apply.hidden = false;
+        show.setAttribute('aria-busy', 'true');
+        timer = setTimeout(async () => {
+            if (controller) {
+                controller.abort();
+            }
+            controller = new AbortController();
+            try {
+                const entry = await of().load(url, controller.signal);
+                const doc = of().parse(entry.html);
+                if (doc) {
+                    staged = entry.url;
+                    of().swap(doc, ['of-filters']);
+                    of().paintSliders();
+                    show.textContent = label(doc.getElementById('of-count')?.dataset.ofCount);
+                    of().focus(options);
+                    focusDropdown(options.dropdown);
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    staged = url;
+                }
+            }
+            show.removeAttribute('aria-busy');
+        }, 250);
+        return true;
+    };
+
+    async function reset() {
+        const entry = await of().load(location.href);
+        const doc = of().parse(entry.html);
+        if (doc) {
+            of().swap(doc, ['of-filters']);
+            of().paintSliders();
+        }
+        hide();
+    }
+
+    function dropdownUrl(select) {
+        const form = select.form;
+        const url = new URL(form.action, location.href);
+        new FormData(form).forEach((value, name) => {
+            if (value !== '') {
+                url.searchParams.set(name, String(value));
+            }
+        });
+        return url.href.replace(/%2C/gi, ',');
+    }
+
+    document.addEventListener('click', (event) => {
+        const control = event.target.closest && event.target.closest('[data-of-apply-show],[data-of-apply-reset]');
+        if (!control || !of()) {
+            return;
+        }
+        event.preventDefault();
+        if (control.hasAttribute('data-of-apply-reset')) {
+            reset();
+            return;
+        }
+        const url = staged;
+        hide();
+        if (url) {
+            of().navigate(url, {apply: true, focus: 'results'});
+        }
+    });
+
+    document.addEventListener('change', (event) => {
+        const select = event.target.closest && event.target.closest('[data-of-dropdown-select]');
+        const group = select && select.closest('[data-of-group]');
+        if (!select || !of()) {
+            return;
+        }
+        const key = group ? group.dataset.ofGroup : null;
+        Promise.resolve(of().navigate(dropdownUrl(select), {group: key, focus: 'none', dropdown: key}))
+            .then(() => focusDropdown(key));
+    });
+
+    const bar_ = () => document.querySelector('.of-drawer--horizontal:not([data-of-modal])');
+
+    function closeGroups(except) {
+        const horizontal = bar_();
+        if (!horizontal) {
+            return null;
+        }
+        let closed = null;
+        horizontal.querySelectorAll('details.of-group[open]').forEach((group) => {
+            if (group !== except) {
+                group.open = false;
+                closed = group;
+            }
+        });
+        return closed;
+    }
+
+    document.addEventListener('toggle', (event) => {
+        if (event.target.matches && event.target.matches('details.of-group') && event.target.open) {
+            closeGroups(event.target);
+        }
+    }, true);
+    document.addEventListener('click', (event) => {
+        if (bar_() && !event.target.closest('.of-drawer--horizontal details.of-group')) {
+            closeGroups(null);
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        const open = event.key === 'Escape' && event.target.closest && event.target.closest('.of-drawer--horizontal details.of-group[open]');
+        if (open && bar_()) {
+            open.open = false;
+            open.querySelector('summary').focus();
+        }
+    });
+
+    window.addEventListener('openfilter:swapped', hide);
+    document.documentElement.classList.add('of-js');
+})();
+</script>
+<?php $hyvaCsp->registerInlineScript() ?>

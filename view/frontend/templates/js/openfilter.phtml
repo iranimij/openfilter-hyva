@@ -235,6 +235,10 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             stage(url, options);
             return;
         }
+        // Desktop apply mode (js/extras.phtml)
+        if (!options.apply && options.group && window.openFilterStage && window.openFilterStage(url, options)) {
+            return;
+        }
         if (controller) {
             controller.abort();
         }
@@ -627,7 +631,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
                 history.replaceState(Object.assign({}, history.state, {scroll: window.scrollY}), '');
             }, 150);
         }, {passive: true});
-        window.openFilter = {navigate};
+        window.openFilter = {navigate, load, parse, swap, paintSliders, focus};
         document.addEventListener('alpine:initialized', cards);
     }
 

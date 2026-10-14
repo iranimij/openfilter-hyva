@@ -19,9 +19,11 @@ class ScriptBudgetTest extends TestCase
 {
     private const FILE = __DIR__ . '/../../../view/frontend/templates/js/openfilter.phtml';
 
-    private function script(): string
+    private const EXTRAS = __DIR__ . '/../../../view/frontend/templates/js/extras.phtml';
+
+    private function script(string $file = self::FILE): string
     {
-        $template = (string) file_get_contents(self::FILE);
+        $template = (string) file_get_contents($file);
         self::assertSame(1, preg_match_all('#<script>(.*?)</script>#s', $template, $scripts), 'exactly one script');
         self::assertStringContainsString('</script>' . "\n" . '<?php $hyvaCsp->registerInlineScript() ?>', $template);
 
@@ -44,5 +46,16 @@ class ScriptBudgetTest extends TestCase
     public function testStaysWithinTheBudget(): void
     {
         self::assertLessThanOrEqual(6144, strlen((string) gzencode($this->script(), 9)));
+    }
+
+    public function testThe11ExtrasAreStaticCspFriendlyAndSmall(): void
+    {
+        $extras = $this->script(self::EXTRAS);
+
+        self::assertStringNotContainsString('<?', $extras);
+        self::assertDoesNotMatchRegularExpression('/\beval\s*\(|new Function|setTimeout\(\s*[\'"]|innerHTML\s*=/', $extras);
+        self::assertLessThanOrEqual(1536, strlen((string) gzencode($extras, 9)), 'a 1.1 mode adds at most 1.5 KB');
+        self::assertStringContainsString('window.openFilterStage', $extras, 'the hook the main component calls');
+        self::assertStringContainsString('window.openFilterStage', $this->script(), 'the main component calls it');
     }
 }

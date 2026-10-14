@@ -14,6 +14,8 @@
         <referenceContainer name="before.body.end">
             <block class="Magento\Framework\View\Element\Template" name="openfilter.js"
                    template="Iranimij_OpenFilterHyva::js/openfilter.phtml"/>
+            <block class="Magento\Framework\View\Element\Template" name="openfilter.js.extras" after="openfilter.js"
+                   template="Iranimij_OpenFilterHyva::js/extras.phtml"/>
         </referenceContainer>
     </body>
 </page>

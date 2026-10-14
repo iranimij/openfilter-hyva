@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+-->
+<!--
+Horizontal layout (1.1, "Where filters show on desktop" = bar above the products; Observer\AddLayerHandles): the
+filter dialog moves out of the sidebar to the top of the content, above the chips and the results, and the page
+uses one column so the products get the full width (the sidebar's other blocks, such as compare and wish list, are
+left out on these pages). Phones still open the filters as the drawer.
+-->
+<page layout="1column" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <move element="catalog.leftnav" destination="content" before="-"/>
+    </body>
+</page>

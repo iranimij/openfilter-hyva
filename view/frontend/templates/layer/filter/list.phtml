@@ -30,7 +30,9 @@ $groupId = (string) $block->getData('group_id');
 $debug = $viewModels->require(Debug::class);
 $renderOption = static function (FilterOption $option) use ($escaper, $debug): string {
     $selected = $option->isSelected();
-    return '<li class="of-options__item"><a class="of-option' . ($selected ? ' of-option--selected' : '') . '" href="'
+    $depth = $option->getDepth();
+    return '<li class="of-options__item' . ($depth > 0 ? ' of-options__item--depth-' . min($depth, 5) : '') . '">'
+        . '<a class="of-option' . ($selected ? ' of-option--selected' : '') . '" href="'
         . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
         . $escaper->escapeHtmlAttr($option->getValue()) . '"' . ($selected ? ' aria-current="true"' : '')
         . ($option->getRel() !== '' ? ' rel="' . $escaper->escapeHtmlAttr($option->getRel()) . '"' : '')
