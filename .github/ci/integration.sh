@@ -33,6 +33,10 @@ composer config --no-plugins allow-plugins.php-http/discovery true
 composer require --no-update --no-interaction "$package:1.0.0"
 # 2.4.7's project does not ship the Elasticsearch 8 engine module; add it for the ES8 leg (2.4.8+ include it).
 if [ "$SEARCH_ENGINE" = elasticsearch8 ] && ! grep -q '"magento/module-elasticsearch-8"' composer.lock 2>/dev/null; then
+  # Its product package requires the Elasticsearch 7 module, whose 7.x client conflicts with ES8's: replace it.
+  php -r '$f = "composer.json"; $c = json_decode(file_get_contents($f), true);
+    $c["replace"] = ($c["replace"] ?? []) + ["magento/module-elasticsearch-7" => "*"];
+    file_put_contents($f, json_encode($c, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");'
   composer require --no-update --no-interaction "magento/module-elasticsearch-8:^101.0"
 fi
 # Composer 2.9 blocks packages with security advisories during resolution; 2.4.7 pins league/flysystem 2.x, so the
