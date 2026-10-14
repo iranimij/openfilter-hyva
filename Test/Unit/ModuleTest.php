@@ -62,7 +62,7 @@ class ModuleTest extends TestCase
 
     public function testOpenFilterLayoutHandlesExist(): void
     {
-        foreach (['openfilter_hyva_layer', 'openfilter_hyva_category'] as $handle) {
+        foreach (['openfilter_hyva_layer', 'openfilter_hyva_category', 'openfilter_hyva_search'] as $handle) {
             self::assertFileExists(dirname(__DIR__, 2) . '/view/frontend/layout/' . $handle . '.xml');
         }
     }

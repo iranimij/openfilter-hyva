@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+-->
+<!--
+Search result pages on a Hyvä theme with OpenFilter enabled (Observer\AddLayerHandles): the same templates and the
+same three regions as openfilter_hyva_category.xml, on the catalogsearch blocks (#of-results wraps search.result, so
+"no results" is inside the region too). The query parameter q stays in every filter URL.
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceBlock name="catalogsearch.leftnav">
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">Iranimij_OpenFilterHyva::layer/view.phtml</argument>
+            </action>
+            <!-- Options per display mode: a child named after the mode (FilterGroup::getDisplay()), "list" as fallback. -->
+            <block class="Magento\Framework\View\Element\Template" name="openfilter.search.group" as="of_group"
+                   template="Iranimij_OpenFilterHyva::layer/group.phtml">
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.search.filter.list" as="list"
+                       template="Iranimij_OpenFilterHyva::layer/filter/list.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.search.filter.swatch" as="swatch"
+                       template="Iranimij_OpenFilterHyva::layer/filter/swatch.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.search.filter.rating" as="rating"
+                       template="Iranimij_OpenFilterHyva::layer/filter/rating.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.search.filter.toggle" as="toggle"
+                       template="Iranimij_OpenFilterHyva::layer/filter/toggle.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.search.filter.category" as="category"
+                       template="Iranimij_OpenFilterHyva::layer/filter/category.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.search.filter.slider" as="slider"
+                       template="Iranimij_OpenFilterHyva::layer/filter/slider.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.search.filter.from_to" as="from_to"
+                       template="Iranimij_OpenFilterHyva::layer/filter/slider.phtml"/>
+            </block>
+        </referenceBlock>
+        <referenceBlock name="catalogsearch.navigation.state">
+            <action method="setTemplate">
+                <argument name="template" xsi:type="string">Iranimij_OpenFilterHyva::layer/state.phtml</argument>
+            </action>
+        </referenceBlock>
+        <referenceContainer name="content">
+            <container name="openfilter.search.results" htmlTag="div" htmlId="of-results" htmlClass="of-results"
+                       before="search.result"/>
+        </referenceContainer>
+        <move element="search.result" destination="openfilter.search.results"/>
+        <move element="catalogsearch.navigation.state" destination="content" before="openfilter.search.results"/>
+    </body>
+</page>
