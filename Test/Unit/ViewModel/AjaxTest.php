@@ -27,7 +27,7 @@ class AjaxTest extends TestCase
     }
 
     /**
-     * @return array<string, array{bool, string, string, string, bool}>
+     * @return array<string, array{0: bool, 1: string, 2: string, 3: string, 4: bool, 5?: string}>
      */
     public static function extras(): array
     {
@@ -37,6 +37,8 @@ class AjaxTest extends TestCase
             'horizontal bar' => [true, 'instant', 'horizontal', 'list', true],
             'a dropdown filter' => [true, 'instant', 'sidebar', 'dropdown', true],
             'AJAX off: nothing' => [false, 'button', 'horizontal', 'dropdown', false],
+            'an H1 template' => [true, 'instant', 'sidebar', 'list', true, '{filters} {category}'],
+            'AJAX off with an H1 template: nothing' => [false, 'instant', 'sidebar', 'list', false, '{filters} {category}'],
         ];
     }
 
@@ -44,18 +46,31 @@ class AjaxTest extends TestCase
      * @dataProvider extras
      */
     #[DataProvider('extras')]
-    public function testTheExtrasScriptOnlyWhereAModeNeedsIt(bool $ajax, string $apply, string $layout, string $display, bool $expected): void
-    {
-        self::assertSame($expected, $this->ajax(true, $ajax, $apply, $layout, $display)->needsExtras());
+    public function testTheExtrasScriptOnlyWhereAModeNeedsIt(
+        bool $ajax,
+        string $apply,
+        string $layout,
+        string $display,
+        bool $expected,
+        string $h1 = ''
+    ): void {
+        self::assertSame($expected, $this->ajax(true, $ajax, $apply, $layout, $display, $h1)->needsExtras());
     }
 
-    private function ajax(bool $enabled, bool $ajax, string $apply = 'instant', string $layout = 'sidebar', string $display = 'list'): Ajax
-    {
+    private function ajax(
+        bool $enabled,
+        bool $ajax,
+        string $apply = 'instant',
+        string $layout = 'sidebar',
+        string $display = 'list',
+        string $h1 = ''
+    ): Ajax {
         $config = $this->createStub(Config::class);
         $config->method('isEnabled')->willReturn($enabled);
         $config->method('isAjaxEnabled')->willReturn($ajax);
         $config->method('getApplyMode')->willReturn($apply);
         $config->method('getLayout')->willReturn($layout);
+        $config->method('getH1Template')->willReturn($h1);
         $filters = $this->createStub(FilterConfigProvider::class);
         $filters->method('getActive')->willReturn([
             'climate' => (new Defaults())->forAttribute('climate', 90, 'multiselect', null, 10)->setDisplayMode($display),

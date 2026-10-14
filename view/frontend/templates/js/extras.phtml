@@ -19,7 +19,8 @@ use Magento\Framework\View\Element\Template;
  *   puts the filters back; phones keep the drawer (it stages on its own);
  * - dropdowns: a change loads the dropdown's GET form result like a link (without JavaScript the form's button does);
  * - horizontal bar: one group popover open at a time; Escape or a click outside closes it (focus back on its title).
- * A swap made elsewhere (a chip, the pager, Back) ends staging; after a swap the keyboard stays on the dropdown.
+ * A swap made elsewhere (a chip, the pager, Back) ends staging; after a swap the keyboard stays on the dropdown and the
+ * H1 follows the page (1.1 H1 template; the title, robots, canonical and description follow in the main component).
  *
  * @var Template $block
  * @var Escaper $escaper
@@ -183,7 +184,14 @@ if (!$viewModels->require(Ajax::class)->needsExtras()) {
         }
     });
 
-    window.addEventListener('openfilter:swapped', hide);
+    window.addEventListener('openfilter:swapped', (event) => {
+        hide();
+        const theirs = event.detail && event.detail.doc && event.detail.doc.querySelector('h1');
+        const mine = document.querySelector('h1');
+        if (theirs && mine && mine.textContent !== theirs.textContent) {
+            mine.replaceWith(document.importNode(theirs, true));
+        }
+    });
     document.documentElement.classList.add('of-js');
 })();
 </script>

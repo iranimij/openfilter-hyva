@@ -54,7 +54,9 @@ class ScriptBudgetTest extends TestCase
 
         self::assertStringNotContainsString('<?', $extras);
         self::assertDoesNotMatchRegularExpression('/\beval\s*\(|new Function|setTimeout\(\s*[\'"]|innerHTML\s*=/', $extras);
-        self::assertLessThanOrEqual(1536, strlen((string) gzencode($extras, 9)), 'a 1.1 mode adds at most 1.5 KB');
+        // Four modes share the script (desktop apply, dropdown, horizontal bar, H1 template): each well under the
+        // plan's 1.5 KB per mode, 2 KB together; it loads only where a store view uses one of them.
+        self::assertLessThanOrEqual(2048, strlen((string) gzencode($extras, 9)), 'the 1.1 extras stay under 2 KB');
         self::assertStringContainsString('window.openFilterStage', $extras, 'the hook the main component calls');
         self::assertStringContainsString('window.openFilterStage', $this->script(), 'the main component calls it');
     }

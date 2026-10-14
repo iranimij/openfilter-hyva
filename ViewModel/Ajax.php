@@ -41,7 +41,7 @@ class Ajax implements ArgumentInterface
 
     /**
      * The 1.1 extras script (desktop "Show N products", dropdowns that load on change, the horizontal bar's
-     * popovers) is printed only where a store
+     * popovers, the H1 template after swaps) is printed only where a store
      * view uses one of them, so the default page keeps its script budget.
      *
      * @return bool
@@ -53,7 +53,8 @@ class Ajax implements ArgumentInterface
         }
         $storeId = (int) $this->storeManager->getStore()->getId();
         if ($this->config->getApplyMode($storeId) === Config::APPLY_BUTTON
-            || $this->config->getLayout($storeId) === Config::LAYOUT_HORIZONTAL) {
+            || $this->config->getLayout($storeId) === Config::LAYOUT_HORIZONTAL
+            || $this->config->getH1Template($storeId) !== '') {
             return true;
         }
         foreach ($this->filters->getActive($storeId) as $filter) {

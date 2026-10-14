@@ -41,7 +41,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         document.documentElement.classList.add('of-inline');
     }
     const REGIONS = ['of-filters', 'of-state', 'of-results'];
-    const HEAD = ['meta[name="robots"]', 'link[rel="canonical"]', 'link[rel="prev"]', 'link[rel="next"]'];
+    const HEAD = ['meta[name="robots"]', 'meta[name="description"]', 'link[rel="canonical"]', 'link[rel="prev"]', 'link[rel="next"]'];
     const CACHE_SIZE = 10;
     const RANGE = '999999901-999999902'; // Slider::PLACEHOLDER (core view model)
     const cache = new Map();
@@ -275,7 +275,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             }
             focus(options);
             scroll(options);
-            window.dispatchEvent(new CustomEvent('openfilter:swapped', {detail: {url: entry.url}}));
+            window.dispatchEvent(new CustomEvent('openfilter:swapped', {detail: {url: entry.url, doc}}));
         } catch (error) {
             if (error.name !== 'AbortError') {
                 location.href = url;
