@@ -1,0 +1,80 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Iranimij\OpenFilter\ViewModel\Data\FilterOption;
+use Iranimij\OpenFilter\ViewModel\Swatch;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * Swatches with a visible label: colours as SVG fills (no inline styles under CSP), images as <img>, text swatches
+ * as text. Colour is never the only signal: label, count and a check mark when selected.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ */
+/** @var FilterGroup $group */
+$group = $block->getData('group');
+$groupId = (string) $block->getData('group_id');
+$swatches = $viewModels->require(Swatch::class)->forGroup($group);
+$renderOption = static function (FilterOption $option) use ($escaper, $swatches): string {
+    $selected = $option->isSelected();
+    $swatch = $swatches[$option->getValue()] ?? ['type' => Swatch::TEXT, 'value' => $option->getLabel()];
+    if ($swatch['type'] === Swatch::COLOR) {
+        $visual = '<svg class="of-swatch__visual" viewBox="0 0 1 1" aria-hidden="true" focusable="false">'
+            . '<rect width="1" height="1" fill="' . $escaper->escapeHtmlAttr($swatch['value']) . '"/></svg>';
+    } elseif ($swatch['type'] === Swatch::IMAGE) {
+        $visual = '<img class="of-swatch__visual" src="' . $escaper->escapeUrl($swatch['value'])
+            . '" alt="" width="36" height="36" loading="lazy">';
+    } else {
+        $visual = '<span class="of-swatch__visual of-swatch__text" aria-hidden="true">'
+            . $escaper->escapeHtml($swatch['value']) . '</span>';
+    }
+    return '<li class="of-swatches__item"><a class="of-swatch' . ($selected ? ' of-swatch--selected' : '')
+        . '" href="' . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
+        . $escaper->escapeHtmlAttr($option->getValue()) . '"'
+        . ($selected ? ' aria-current="true"' : '') . '>' . $visual
+        . '<span class="of-swatch__label">' . $escaper->escapeHtml($option->getLabel()) . '</span>'
+        . ($selected ? '<span class="of-sr">' . $escaper->escapeHtml(__('selected')) . '</span>' : '')
+        . '<span class="of-swatch__count">' . $option->getCount()
+        . '<span class="of-sr"> ' . $escaper->escapeHtml(__('products')) . '</span></span></a></li>';
+};
+?>
+<?php if ($group->isSearchable() && $viewModels->require(Ajax::class)->isEnabled()): ?>
+    <div class="of-search">
+        <input type="search" class="of-search__input" data-of-search
+               aria-label="<?= $escaper->escapeHtmlAttr(__('Search %1 options', $group->getLabel())) ?>"
+               aria-controls="<?= $escaper->escapeHtmlAttr($groupId) ?>-options"
+               placeholder="<?= $escaper->escapeHtmlAttr(__('Search %1', $group->getLabel())) ?>">
+    </div>
+<?php endif; ?>
+<div class="of-options-wrap" id="<?= $escaper->escapeHtmlAttr($groupId) ?>-options">
+    <ul class="of-swatches" aria-labelledby="<?= $escaper->escapeHtmlAttr($groupId) ?>-title">
+        <?php foreach ($group->getLeadingOptions() as $option): ?>
+            <?= /* @noEscape */ $renderOption($option) ?>
+        <?php endforeach; ?>
+    </ul>
+<?php $more = $group->getMoreOptions(); ?>
+<?php if ($more !== []): ?>
+    <details class="of-more">
+        <summary class="of-more__toggle">
+            <span class="of-more__show"><?= $escaper->escapeHtml(__('Show more (%1)', count($more))) ?></span>
+            <span class="of-more__hide"><?= $escaper->escapeHtml(__('Show less')) ?></span>
+        </summary>
+        <ul class="of-swatches">
+            <?php foreach ($more as $option): ?>
+                <?= /* @noEscape */ $renderOption($option) ?>
+            <?php endforeach; ?>
+        </ul>
+    </details>
+<?php endif; ?>
+</div>

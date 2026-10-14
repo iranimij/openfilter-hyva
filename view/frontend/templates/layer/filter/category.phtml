@@ -1,0 +1,52 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Iranimij\OpenFilter\ViewModel\Data\FilterOption;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * Core's category drill-down: plain links to the subcategory, no check box (a category replaces the current one).
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ */
+/** @var FilterGroup $group */
+$group = $block->getData('group');
+$groupId = (string) $block->getData('group_id');
+$renderOption = static function (FilterOption $option) use ($escaper): string {
+    return '<li class="of-options__item"><a class="of-option of-option--link" href="'
+        . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
+        . $escaper->escapeHtmlAttr($option->getValue()) . '">'
+        . '<span class="of-option__label">' . $escaper->escapeHtml($option->getLabel()) . '</span>'
+        . '<span class="of-option__count">' . $option->getCount()
+        . '<span class="of-sr"> ' . $escaper->escapeHtml(__('products')) . '</span></span></a></li>';
+};
+?>
+<div class="of-options-wrap" id="<?= $escaper->escapeHtmlAttr($groupId) ?>-options">
+    <ul class="of-options" aria-labelledby="<?= $escaper->escapeHtmlAttr($groupId) ?>-title">
+        <?php foreach ($group->getLeadingOptions() as $option): ?>
+            <?= /* @noEscape */ $renderOption($option) ?>
+        <?php endforeach; ?>
+    </ul>
+<?php $more = $group->getMoreOptions(); ?>
+<?php if ($more !== []): ?>
+    <details class="of-more">
+        <summary class="of-more__toggle">
+            <span class="of-more__show"><?= $escaper->escapeHtml(__('Show more (%1)', count($more))) ?></span>
+            <span class="of-more__hide"><?= $escaper->escapeHtml(__('Show less')) ?></span>
+        </summary>
+        <ul class="of-options">
+            <?php foreach ($more as $option): ?>
+                <?= /* @noEscape */ $renderOption($option) ?>
+            <?php endforeach; ?>
+        </ul>
+    </details>
+<?php endif; ?>
+</div>

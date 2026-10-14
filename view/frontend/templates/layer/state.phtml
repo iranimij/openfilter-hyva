@@ -1,0 +1,50 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilter\ViewModel\State;
+use Magento\Framework\Escaper;
+use Magento\LayeredNavigation\Block\Navigation\State as StateBlock;
+
+/**
+ * Active filters as chips above the results (#of-state; always printed, so the AJAX layer has a region to swap):
+ * "Colour: Blue ×" links that remove one value, and "Clear all".
+ *
+ * @var StateBlock $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ */
+$stateViewModel = $viewModels->require(State::class);
+$active = $block->getActiveFilters();
+$chips = $stateViewModel->chips($active);
+$count = (int) $block->getLayer()->getProductCollection()->getSize();
+?>
+<div id="of-state" class="of-state" data-of-region="state" data-of-count="<?= (int) $count ?>"
+     data-of-announce="<?= $escaper->escapeHtmlAttr($count === 1 ? __('1 product') : __('%1 products', $count)) ?>">
+<?php if ($chips !== []): ?>
+    <h2 class="of-sr"><?= $escaper->escapeHtml(__('Now Shopping by')) ?></h2>
+    <ul class="of-state__list">
+        <?php foreach ($chips as $chip): ?>
+            <li>
+                <a class="of-chip" href="<?= $escaper->escapeUrl($chip->getRemoveUrl()) ?>" data-of-link
+                   data-of-focus="results"
+                   aria-label="<?= $escaper->escapeHtmlAttr(__('Remove filter %1', $chip->getText())) ?>">
+                    <span class="of-chip__text"><?= $escaper->escapeHtml($chip->getText()) ?></span>
+                    <span class="of-chip__remove" aria-hidden="true">×</span>
+                </a>
+            </li>
+        <?php endforeach; ?>
+        <li>
+            <a class="of-clear" href="<?= $escaper->escapeUrl($stateViewModel->clearUrl($active)) ?>" data-of-link
+               data-of-focus="results">
+                <?= $escaper->escapeHtml(__('Clear all')) ?>
+            </a>
+        </li>
+    </ul>
+<?php endif; ?>
+</div>

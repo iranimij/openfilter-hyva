@@ -31,6 +31,16 @@ composer config --no-plugins allow-plugins.laminas/laminas-dependency-plugin tru
 composer config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
 composer config --no-plugins allow-plugins.php-http/discovery true
 composer require --no-update --no-interaction "$package:1.0.0"
+# Hyvä from its public OSL repositories on GitHub (not on packagist.org): the theme module the package requires and
+# the default theme the storefront integration tests render with.
+for repo in theme-module mollie-theme-bundle default-theme base-layout-reset email-module graphql-tokens \
+            graphql-view-model order-cancellation-webapi compat-module-fallback; do
+  # git clones, not the GitHub API: many parallel jobs would exhaust the token's API rate limit ("Could not authenticate").
+  composer config "repositories.hyva-$repo" '{"type":"vcs","url":"https://github.com/hyva-themes/magento2-'"$repo"'","no-api":true}'
+done
+composer config minimum-stability dev
+composer config prefer-stable true
+composer require --no-update --no-interaction "hyva-themes/magento2-default-theme:${HYVA_THEME_VERSION:-1.4.2}"
 # 2.4.7's project does not ship the Elasticsearch 8 engine module; add it for the ES8 leg (2.4.8+ include it).
 if [ "$SEARCH_ENGINE" = elasticsearch8 ] && ! grep -q '"magento/module-elasticsearch-8"' composer.lock 2>/dev/null; then
   # Its product package requires the Elasticsearch 7 module, whose 7.x client conflicts with ES8's: replace it.
@@ -50,6 +60,10 @@ composer config audit.block-insecure false || true
 composer install --no-interaction --no-progress --prefer-dist \
   || { echo "composer install failed, retrying once"; composer clear-cache; composer install --no-interaction --no-progress --prefer-dist; }
 echo "::endgroup::"
+
+# Hyvä's recurring setup builds an object manager from the project root's app/etc and sets the frontend area; the
+# test framework installs into a sandbox, so the root needs its own module list or "frontend" does not exist.
+php bin/magento module:enable --all >/dev/null
 
 echo "::group::Test framework configuration ($SEARCH_ENGINE)"
 cd dev/tests/integration

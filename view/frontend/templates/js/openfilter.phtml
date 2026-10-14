@@ -1,0 +1,486 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * OpenFilter's one Alpine component: same-URL AJAX for filter links, chips, the pager and the toolbar. It fetches
+ * the URL a click would load (so Varnish and the page cache serve it), swaps #of-filters, #of-state and #of-results,
+ * updates history and the head, announces the product count and keeps the focus where 08 §4 wants it. Without it,
+ * every control is a plain link or form. The script is static (no PHP inside), registered for CSP, and works with
+ * Hyvä's standard and CSP Alpine builds (no inline expressions).
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ * @var HyvaCsp $hyvaCsp
+ */
+if (!$viewModels->require(Ajax::class)->isEnabled()) {
+    return;
+}
+?>
+<div x-data="openFilter" class="of-sr" role="status" aria-live="polite" data-of-live
+     data-of-empty="<?= $escaper->escapeHtmlAttr(__('No products match.')) ?>"
+     data-of-undo="<?= $escaper->escapeHtmlAttr(__('Remove the last filter')) ?>"></div>
+<script>
+(() => {
+    'use strict';
+    const REGIONS = ['of-filters', 'of-state', 'of-results'];
+    const HEAD = ['meta[name="robots"]', 'link[rel="canonical"]', 'link[rel="prev"]', 'link[rel="next"]'];
+    const CACHE_SIZE = 10;
+    const RANGE = '999999901-999999902'; // Slider::PLACEHOLDER (core view model)
+    const cache = new Map();
+    const ran = new Set();
+    let controller = null;
+    let live = null;
+
+    const sameOrigin = (url) => {
+        try {
+            return new URL(url, location.href).origin === location.origin;
+        } catch (e) {
+            return false;
+        }
+    };
+    const fold = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    const remember = (url, entry) => {
+        cache.delete(url);
+        cache.set(url, entry);
+        while (cache.size > CACHE_SIZE) {
+            cache.delete(cache.keys().next().value);
+        }
+    };
+
+    async function load(url, signal) {
+        if (cache.has(url)) {
+            return cache.get(url);
+        }
+        const response = await fetch(url, {credentials: 'same-origin', signal});
+        if (!response.ok || !(response.headers.get('content-type') || '').includes('text/html')) {
+            throw new Error('OpenFilter: ' + response.status);
+        }
+        const entry = {url: response.url || url, html: await response.text()};
+        remember(url, entry);
+        remember(entry.url, entry);
+        return entry;
+    }
+
+    function parse(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        return REGIONS.every((id) => doc.getElementById(id)) ? doc : null;
+    }
+
+    // Inline scripts of swapped markup (product cards) run once per distinct script; JSON stays data.
+    function runScripts(root) {
+        root.querySelectorAll('script').forEach((old) => {
+            const type = old.getAttribute('type');
+            const code = old.textContent;
+            if ((type && !/javascript|module/i.test(type)) || old.src || ran.has(code)) {
+                return;
+            }
+            ran.add(code);
+            const script = document.createElement('script');
+            [...old.attributes].forEach((attribute) => script.setAttribute(attribute.name, attribute.value));
+            script.textContent = code;
+            old.replaceWith(script);
+        });
+    }
+
+    function openGroups() {
+        return [...document.querySelectorAll('#of-filters details[open]')].map((details) => {
+            const group = details.closest('[data-of-group]');
+            return group && (details.classList.contains('of-more') ? 'more:' : 'group:') + group.dataset.ofGroup;
+        }).filter(Boolean);
+    }
+
+    function reopen(keys) {
+        document.querySelectorAll('#of-filters [data-of-group]').forEach((group) => {
+            if (keys.includes('group:' + group.dataset.ofGroup)) {
+                group.open = true;
+            }
+            const more = group.querySelector('details.of-more');
+            if (more && keys.includes('more:' + group.dataset.ofGroup)) {
+                more.open = true;
+            }
+        });
+    }
+
+    function swap(doc) {
+        const open = openGroups();
+        window.Alpine.mutateDom(() => {
+            REGIONS.forEach((id) => {
+                const current = document.getElementById(id);
+                const next = doc.getElementById(id);
+                window.Alpine.destroyTree(current);
+                [...current.attributes].forEach((a) => next.hasAttribute(a.name) || current.removeAttribute(a.name));
+                [...next.attributes].forEach((a) => current.setAttribute(a.name, a.value));
+                current.replaceChildren(...next.childNodes);
+                runScripts(current);
+            });
+            reopen(open);
+        });
+        REGIONS.forEach((id) => window.Alpine.initTree(document.getElementById(id)));
+        // Hyvä fills form keys (add to cart, compare) on page load only.
+        if (window.hyva && typeof window.hyva.initFormKey === 'function') {
+            window.hyva.initFormKey();
+        }
+    }
+
+    function syncHead(doc) {
+        document.title = doc.title;
+        HEAD.forEach((selector) => {
+            const mine = document.head.querySelector(selector);
+            const theirs = doc.head.querySelector(selector);
+            if (theirs) {
+                const copy = document.importNode(theirs, true);
+                mine ? mine.replaceWith(copy) : document.head.append(copy);
+            } else if (mine) {
+                mine.remove();
+            }
+        });
+    }
+
+    function announce() {
+        const state = document.getElementById('of-state');
+        if (!live || !state) {
+            return;
+        }
+        live.textContent = '';
+        setTimeout(() => {
+            live.textContent = state.dataset.ofAnnounce || '';
+        }, 50);
+    }
+
+    function results() {
+        const region = document.getElementById('of-results');
+        const target = region.querySelector('#product-list') || region;
+        if (!target.hasAttribute('tabindex')) {
+            target.setAttribute('tabindex', '-1');
+        }
+        return target;
+    }
+
+    function focus(options) {
+        if (options.focus === 'option' && options.group) {
+            const group = document.querySelector('#of-filters [data-of-group="' + CSS.escape(options.group) + '"]');
+            const target = group && group.querySelector(options.control ||
+                '[data-of-value="' + CSS.escape(options.value || '') + '"]');
+            if (target) {
+                target.focus({preventScroll: true});
+                return;
+            }
+        }
+        if (options.focus !== 'none') {
+            results().focus({preventScroll: true});
+        }
+    }
+
+    function scroll(options) {
+        if (typeof options.scroll === 'number') {
+            window.scrollTo(0, options.scroll);
+            return;
+        }
+        const region = document.getElementById('of-results');
+        if (region.getBoundingClientRect().top < 0) {
+            region.scrollIntoView({block: 'start'});
+        }
+    }
+
+    // Zero results only come from ranges or typed URLs (08 §2): offer one click back.
+    function offerUndo(from) {
+        const state = document.getElementById('of-state');
+        if (!state || state.dataset.ofCount !== '0' || !from || !live) {
+            return;
+        }
+        const notice = document.createElement('p');
+        const undo = document.createElement('a');
+        notice.className = 'of-empty';
+        notice.textContent = live.dataset.ofEmpty + ' ';
+        undo.href = from;
+        undo.textContent = live.dataset.ofUndo;
+        undo.setAttribute('data-of-link', '');
+        undo.dataset.ofFocus = 'results';
+        notice.append(undo);
+        state.prepend(notice);
+    }
+
+    async function navigate(url, options = {}) {
+        if (controller) {
+            controller.abort();
+        }
+        controller = new AbortController();
+        const signal = controller.signal;
+        const region = document.getElementById('of-results');
+        const from = location.href;
+        region.classList.add('of-loading');
+        region.setAttribute('aria-busy', 'true');
+        performance.mark('of:swap-start');
+        try {
+            const entry = await load(url, signal);
+            const doc = parse(entry.html);
+            if (signal.aborted) {
+                return;
+            }
+            if (!doc) {
+                throw new Error('OpenFilter: regions missing');
+            }
+            if (options.push !== false) {
+                history.replaceState(Object.assign({}, history.state, {openFilter: true, scroll: window.scrollY}), '');
+                history.pushState({openFilter: true}, '', entry.url);
+            }
+            swap(doc);
+            syncHead(doc);
+            paintSliders();
+            performance.mark('of:swap-end');
+            performance.measure('of:swap', 'of:swap-start', 'of:swap-end');
+            announce();
+            if (options.push !== false) {
+                offerUndo(from);
+            }
+            focus(options);
+            scroll(options);
+            window.dispatchEvent(new CustomEvent('openfilter:swapped', {detail: {url: entry.url}}));
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                location.href = url;
+            }
+        } finally {
+            if (controller && controller.signal === signal) {
+                region.classList.remove('of-loading');
+                region.removeAttribute('aria-busy');
+            }
+        }
+    }
+
+    // Range sliders (10 FE7): two range inputs on one track and two number fields, applied on release.
+    const sliderPart = (form, role) => ({
+        range: form.querySelector('[data-of-range="' + role + '"]'),
+        number: form.querySelector('[data-of-number="' + role + '"]')
+    });
+    const round = (value) => String(Math.round(value * 100) / 100);
+
+    function formatValue(form, value) {
+        try {
+            const currency = form.dataset.ofCurrency;
+            return new Intl.NumberFormat(form.dataset.ofLocale || undefined, currency
+                ? {style: 'currency', currency, maximumFractionDigits: 2}
+                : {maximumFractionDigits: 2}).format(value);
+        } catch (e) {
+            return round(value);
+        }
+    }
+
+    function paint(form) {
+        const from = sliderPart(form, 'from').range;
+        const to = sliderPart(form, 'to').range;
+        if (!from || !to) {
+            return;
+        }
+        const min = Number(from.min);
+        const span = Number(from.max) - min || 1;
+        form.style.setProperty('--of-from', ((Number(from.value) - min) / span * 100) + '%');
+        form.style.setProperty('--of-to', ((Number(to.value) - min) / span * 100) + '%');
+        const output = form.querySelector('[data-of-output]');
+        if (output) {
+            output.textContent = formatValue(form, Number(from.value)) + ' – ' + formatValue(form, Number(to.value));
+        }
+    }
+
+    function paintSliders() {
+        document.querySelectorAll('#of-filters [data-of-slider]').forEach(paint);
+    }
+
+    function applySlider(form, control) {
+        const from = sliderPart(form, 'from').number;
+        const to = sliderPart(form, 'to').number;
+        const min = Number(from.min);
+        const max = Number(from.max);
+        const low = Math.max(min, Math.min(Number(from.value), Number(to.value)));
+        const high = Math.min(max, Math.max(Number(from.value), Number(to.value)));
+        const group = form.closest('[data-of-group]');
+        navigate(low <= min && high >= max ? form.dataset.ofClear : form.dataset.ofUrl.replace(RANGE, round(low) + '-' +
+            round(high)), {focus: 'option', group: group && group.dataset.ofGroup, control});
+    }
+
+    let sliderTimer = 0;
+
+    function onSlider(event) {
+        const input = event.target;
+        const form = input.closest && input.closest('[data-of-slider]');
+        const role = form && (input.dataset.ofRange || input.dataset.ofNumber);
+        if (!role) {
+            return;
+        }
+        const own = sliderPart(form, role);
+        const other = sliderPart(form, role === 'from' ? 'to' : 'from');
+        if (input === own.range && other.range) {
+            const value = Number(input.value);
+            const limit = Number(other.range.value);
+            if (role === 'from' ? value > limit : value < limit) {
+                input.value = String(limit);
+            }
+            own.number.value = input.value;
+        } else if (input === own.number && own.range) {
+            own.range.value = input.value;
+        }
+        paint(form);
+        if (event.type === 'change') {
+            clearTimeout(sliderTimer);
+            const control = input.dataset.ofRange ? '[data-of-range="' + role + '"]' : '[data-of-number="' + role + '"]';
+            sliderTimer = setTimeout(() => applySlider(form, control), 300);
+        }
+    }
+
+    function onSliderKey(event) {
+        const input = event.target;
+        if (!input.dataset || !input.dataset.ofRange || (event.key !== 'PageUp' && event.key !== 'PageDown')) {
+            return;
+        }
+        event.preventDefault();
+        const step = Number(input.step) || 1;
+        const value = Number(input.value) + (event.key === 'PageUp' ? 10 : -10) * step;
+        input.value = String(Math.min(Number(input.max), Math.max(Number(input.min), value)));
+        input.dispatchEvent(new Event('input', {bubbles: true}));
+        input.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+
+    function onSliderSubmit(event) {
+        const form = event.target.closest && event.target.closest('[data-of-slider]');
+        if (form) {
+            event.preventDefault();
+            clearTimeout(sliderTimer);
+            applySlider(form, '[data-of-number="to"]');
+        }
+    }
+
+    function toolbarUrl(options, name, value, fallback) {
+        const params = new URLSearchParams(location.search);
+        const limit = options.limit || 'product_list_limit';
+        const page = options.page || 'p';
+        const current = Number(params.get(page) || 1);
+        if (current > 1 && name === limit) {
+            const next = Math.floor(Number(params.get(limit) || options.limitDefault) * (current - 1) / Number(value)) + 1;
+            next > 1 ? params.set(page, String(next)) : params.delete(page);
+        }
+        params.set(name, value);
+        if (String(value) === String(fallback)) {
+            params.delete(name);
+        }
+        const query = params.toString();
+        return location.origin + location.pathname + (query ? '?' + query : '');
+    }
+
+    // Hyvä's toolbar (sorter, limiter, view mode) sets location.href from Alpine: route it through the swap.
+    function adoptToolbar(event) {
+        const toolbar = event.target.closest && event.target.closest('#of-results [x-data^="initToolbar"]');
+        if (!toolbar || toolbar.dataset.ofToolbar) {
+            return;
+        }
+        const data = window.Alpine.$data(toolbar);
+        if (!data || typeof data.changeUrl !== 'function' || (data.options && data.options.post)) {
+            return;
+        }
+        toolbar.dataset.ofToolbar = '1';
+        data.changeUrl = (name, value, fallback) => {
+            navigate(toolbarUrl(data.options || {}, name, value, fallback), {focus: 'results'});
+        };
+    }
+
+    function onClick(event) {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey ||
+            event.altKey) {
+            return;
+        }
+        const link = event.target.closest && event.target.closest('a[href]');
+        if (!link || (link.target && link.target !== '_self') || link.hasAttribute('download') ||
+            !sameOrigin(link.href)) {
+            return;
+        }
+        const pager = link.closest('#of-results .pages');
+        if (!link.hasAttribute('data-of-link') && !pager) {
+            return;
+        }
+        event.preventDefault();
+        const group = link.closest('[data-of-group]');
+        navigate(link.href, {
+            focus: link.dataset.ofFocus || (pager ? 'results' : 'option'),
+            group: group ? group.dataset.ofGroup : null,
+            value: link.dataset.ofValue || null
+        });
+    }
+
+    function onSearch(event) {
+        const input = event.target.closest && event.target.closest('[data-of-search]');
+        const group = input && input.closest('[data-of-group]');
+        if (!group) {
+            return;
+        }
+        const query = fold(input.value);
+        group.querySelectorAll('li').forEach((item) => {
+            const label = item.querySelector('[class$="__label"]');
+            item.hidden = query !== '' && !fold(label ? label.textContent : item.textContent).includes(query);
+        });
+        group.querySelectorAll('details.of-more').forEach((more) => {
+            if (query !== '' && more.dataset.ofWasOpen === undefined) {
+                more.dataset.ofWasOpen = more.open ? '1' : '';
+                more.open = true;
+            } else if (query === '' && more.dataset.ofWasOpen !== undefined) {
+                more.open = more.dataset.ofWasOpen === '1';
+                delete more.dataset.ofWasOpen;
+            }
+        });
+    }
+
+    function onPopState(event) {
+        if (event.state && event.state.openFilter) {
+            navigate(location.href, {push: false, focus: 'none', scroll: event.state.scroll || 0});
+        }
+    }
+
+    function start(root) {
+        if (window.openFilterStarted || !window.fetch || !window.DOMParser || !document.getElementById('of-results')) {
+            return;
+        }
+        window.openFilterStarted = true;
+        live = root;
+        document.querySelectorAll('script:not([src])').forEach((script) => ran.add(script.textContent));
+        history.replaceState(Object.assign({}, history.state, {openFilter: true}), '');
+        document.addEventListener('click', onClick);
+        document.addEventListener('click', adoptToolbar, true);
+        document.addEventListener('change', adoptToolbar, true);
+        document.addEventListener('input', onSearch);
+        document.addEventListener('input', onSlider);
+        document.addEventListener('change', onSlider);
+        document.addEventListener('keydown', onSliderKey);
+        document.addEventListener('submit', onSliderSubmit);
+        paintSliders();
+        window.addEventListener('popstate', onPopState);
+        // Each history entry keeps its own scroll position, so Back and Forward restore it after the swap.
+        let saving = 0;
+        window.addEventListener('scroll', () => {
+            clearTimeout(saving);
+            saving = setTimeout(() => {
+                history.replaceState(Object.assign({}, history.state, {scroll: window.scrollY}), '');
+            }, 150);
+        }, {passive: true});
+        window.openFilter = {navigate};
+    }
+
+    document.addEventListener('alpine:init', () => {
+        window.Alpine.data('openFilter', () => ({
+            init() {
+                start(this.$el);
+            }
+        }));
+    });
+})();
+</script>
+<?php $hyvaCsp->registerInlineScript() ?>

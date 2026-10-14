@@ -1,0 +1,39 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * One filter as a native disclosure (works without JavaScript, no layout shift). The options come from the child
+ * block named after the display mode (list, swatch, slider, rating, toggle, category), "list" as fallback.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ */
+/** @var FilterGroup $group */
+$group = $block->getData('group');
+// The filter key is unique (an attribute named like a built-in filter has the key "attribute:<code>").
+$ident = (string) ($group->getKey() ?? $group->getCode());
+$id = 'of-group-' . preg_replace('/[^a-z0-9_-]/i', '-', $ident);
+$options = $block->getChildBlock($group->getDisplay()) ?: $block->getChildBlock('list');
+$selected = $group->getSelectedCount();
+?>
+<details class="of-group of-group--<?= $escaper->escapeHtmlAttr($group->getDisplay()) ?>"
+         data-of-group="<?= $escaper->escapeHtmlAttr($ident) ?>"<?= $group->isExpanded() ? ' open' : '' ?>>
+    <summary class="of-group__title" id="<?= $escaper->escapeHtmlAttr($id) ?>-title">
+        <span class="of-group__label"><?= $escaper->escapeHtml($group->getLabel()) ?></span>
+        <?php if ($selected > 0): ?>
+            <span class="of-group__active"><?= $escaper->escapeHtml(__('%1 selected', $selected)) ?></span>
+        <?php endif; ?>
+    </summary>
+    <div class="of-group__body" id="<?= $escaper->escapeHtmlAttr($id) ?>">
+        <?= /* @noEscape */ $options ? $options->setData('group', $group)->setData('group_id', $id)->toHtml() : '' ?>
+    </div>
+</details>

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <!-- Runs after Hyvä's own observer (module sequence), so OpenFilter's handles come after the hyva_* handles. -->
+    <event name="layout_load_before">
+        <observer name="openfilter_hyva_layer_handles" instance="Iranimij\OpenFilterHyva\Observer\AddLayerHandles"/>
+    </event>
+</config>

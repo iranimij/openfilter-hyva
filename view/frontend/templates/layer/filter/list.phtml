@@ -1,0 +1,69 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilter\ViewModel\Data\FilterGroup;
+use Iranimij\OpenFilter\ViewModel\Data\FilterOption;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * Options as a list of links with counts (also the fallback for display modes without their own template).
+ * Selected: filled box, bold, "selected" for screen readers and aria-current (aria-pressed is not allowed on links).
+ * The first options are visible, the rest sit behind "Show more" (native details); long lists get a search box
+ * (wired by the AJAX component, hidden without JavaScript).
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ */
+/** @var FilterGroup $group */
+$group = $block->getData('group');
+$groupId = (string) $block->getData('group_id');
+$renderOption = static function (FilterOption $option) use ($escaper): string {
+    $selected = $option->isSelected();
+    return '<li class="of-options__item"><a class="of-option' . ($selected ? ' of-option--selected' : '') . '" href="'
+        . $escaper->escapeUrl($option->getUrl()) . '" data-of-link data-of-value="'
+        . $escaper->escapeHtmlAttr($option->getValue()) . '"' . ($selected ? ' aria-current="true"' : '') . '>'
+        . '<span class="of-option__check" aria-hidden="true"></span>'
+        . '<span class="of-option__label">' . $escaper->escapeHtml($option->getLabel()) . '</span>'
+        . ($selected ? '<span class="of-sr">' . $escaper->escapeHtml(__('selected')) . '</span>' : '')
+        . '<span class="of-option__count">' . $option->getCount()
+        . '<span class="of-sr"> ' . $escaper->escapeHtml(__('products')) . '</span></span></a></li>';
+};
+?>
+<?php if ($group->isSearchable() && $viewModels->require(Ajax::class)->isEnabled()): ?>
+    <div class="of-search">
+        <input type="search" class="of-search__input" data-of-search
+               aria-label="<?= $escaper->escapeHtmlAttr(__('Search %1 options', $group->getLabel())) ?>"
+               aria-controls="<?= $escaper->escapeHtmlAttr($groupId) ?>-options"
+               placeholder="<?= $escaper->escapeHtmlAttr(__('Search %1', $group->getLabel())) ?>">
+    </div>
+<?php endif; ?>
+<div class="of-options-wrap" id="<?= $escaper->escapeHtmlAttr($groupId) ?>-options">
+    <ul class="of-options" aria-labelledby="<?= $escaper->escapeHtmlAttr($groupId) ?>-title">
+        <?php foreach ($group->getLeadingOptions() as $option): ?>
+            <?= /* @noEscape */ $renderOption($option) ?>
+        <?php endforeach; ?>
+    </ul>
+<?php $more = $group->getMoreOptions(); ?>
+<?php if ($more !== []): ?>
+    <details class="of-more">
+        <summary class="of-more__toggle">
+            <span class="of-more__show"><?= $escaper->escapeHtml(__('Show more (%1)', count($more))) ?></span>
+            <span class="of-more__hide"><?= $escaper->escapeHtml(__('Show less')) ?></span>
+        </summary>
+        <ul class="of-options">
+            <?php foreach ($more as $option): ?>
+                <?= /* @noEscape */ $renderOption($option) ?>
+            <?php endforeach; ?>
+        </ul>
+    </details>
+<?php endif; ?>
+</div>

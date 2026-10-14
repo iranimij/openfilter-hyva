@@ -1,0 +1,34 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilter\ViewModel\FilterBlock;
+use Magento\Framework\Escaper;
+use Magento\LayeredNavigation\Block\Navigation;
+
+/**
+ * OpenFilter's filter region (#of-filters): one disclosure per filter, real links underneath.
+ *
+ * @var Navigation $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ */
+$filterBlock = $viewModels->require(FilterBlock::class);
+$groups = $block->canShowBlock() ? $filterBlock->groups($block->getFilters()) : [];
+$renderer = $block->getChildBlock('of_group');
+?>
+<div id="of-filters" class="of-filters" data-of-region="filters">
+<?php if ($groups !== [] && $renderer): ?>
+    <nav class="of-filters__nav" aria-labelledby="of-filters-title">
+        <h2 id="of-filters-title" class="of-filters__title"><?= $escaper->escapeHtml(__('Shop By')) ?></h2>
+        <?php foreach ($groups as $group): ?>
+            <?= /* @noEscape */ $renderer->setData('group', $group)->toHtml() ?>
+        <?php endforeach; ?>
+    </nav>
+<?php endif; ?>
+</div>
