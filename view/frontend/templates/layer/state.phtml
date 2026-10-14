@@ -8,12 +8,14 @@ declare(strict_types=1);
 
 use Hyva\Theme\Model\ViewModelRegistry;
 use Iranimij\OpenFilter\ViewModel\State;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
 use Magento\Framework\Escaper;
 use Magento\LayeredNavigation\Block\Navigation\State as StateBlock;
 
 /**
  * Active filters as chips above the results (#of-state; always printed, so the AJAX layer has a region to swap):
- * "Colour: Blue ×" links that remove one value, and "Clear all".
+ * "Colour: Blue ×" links that remove one value, and "Clear all". On phones, with the AJAX component, a sticky
+ * "Filter (N)" button opens the filter drawer (its space is part of the region from the first paint).
  *
  * @var StateBlock $block
  * @var Escaper $escaper
@@ -23,9 +25,19 @@ $stateViewModel = $viewModels->require(State::class);
 $active = $block->getActiveFilters();
 $chips = $stateViewModel->chips($active);
 $count = (int) $block->getLayer()->getProductCollection()->getSize();
+$ajax = $viewModels->require(Ajax::class)->isEnabled();
 ?>
 <div id="of-state" class="of-state" data-of-region="state" data-of-count="<?= (int) $count ?>"
-     data-of-announce="<?= $escaper->escapeHtmlAttr($count === 1 ? __('1 product') : __('%1 products', $count)) ?>">
+     data-of-announce="<?= $escaper->escapeHtmlAttr($count === 1 ? __('1 product') : __('%1 products', $count)) ?>"
+     data-of-clear-url="<?= $escaper->escapeUrl($stateViewModel->clearUrl($active)) ?>">
+<?php if ($ajax): ?>
+    <div class="of-state__bar">
+        <button type="button" class="of-drawer-toggle" data-of-drawer-open aria-controls="of-drawer"
+                aria-haspopup="dialog">
+            <?= $escaper->escapeHtml($chips === [] ? __('Filter') : __('Filter (%1)', count($chips))) ?>
+        </button>
+    </div>
+<?php endif; ?>
 <?php if ($chips !== []): ?>
     <h2 class="of-sr"><?= $escaper->escapeHtml(__('Now Shopping by')) ?></h2>
     <ul class="of-state__list">
