@@ -2,9 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [1.1.0] - unreleased
+## [1.1.0-rc1] - 2026-10-16
 
 Everything new is opt-in: with the 1.0 settings, the markup and behaviour stay as they were.
+
+### Changed
+- Requires `iranimij/openfilter` ^1.1 (the storefront reads the 1.1 settings); update both packages together, or update the bundle.
 
 ### Added
 - Dropdown display type (a native select in a GET form, also without JavaScript), category tree levels, price ranges as options.
