@@ -76,9 +76,21 @@ class StorefrontModesTest extends HyvaPageTestCase
         $group = $this->group($this->page([]), M1Catalog::COLOR);
 
         self::assertMatchesRegularExpression(
-            '#<div class="of-group__body"[^>]*>\s*<p class="of-group__hint">\s*<span class="of-group__match">Products have all picked values\.</span>\s*Pick every colour the product has\.#',
-            $group
+            '#<div class="of-group__body"[^>]*>\s*<p class="of-group__hint">\s*<span class="of-group__match">Products have all picked values\.</span>\s*</p>\s*'
+            . '<details class="of-about">\s*<summary>About [^<]+</summary>\s*<p class="of-group__hint">Pick every colour the product has\.</p>#',
+            $group,
+            'one line for "all"; the tooltip opens on demand'
         );
+    }
+
+    public function testATooltipAloneStaysInView(): void
+    {
+        $this->repository->saveTooltip(M1Catalog::COLOR, 0, 'Pick a colour.');
+
+        $group = $this->group($this->page([]), M1Catalog::COLOR);
+
+        self::assertMatchesRegularExpression('#<div class="of-group__body"[^>]*>\s*<p class="of-group__hint">Pick a colour\.</p>#', $group);
+        self::assertStringNotContainsString('of-about', $group);
     }
 
     public function testCategoryTreeOptionsCarryTheirDepth(): void

@@ -18,7 +18,8 @@ use Magento\Framework\View\Element\Template;
  * - desktop apply mode: filter clicks are staged and prefetched; "Show N products" swaps the prefetched page, Reset
  *   puts the filters back; phones keep the drawer (it stages on its own);
  * - dropdowns: a change loads the dropdown's GET form result like a link (without JavaScript the form's button does);
- * - horizontal bar: one group popover open at a time; Escape or a click outside closes it (focus back on its title).
+ * - horizontal bar: one row of filters with "More filters (N)" for the rest; one group popover open at a time;
+ *   Escape or a click outside closes it (focus back on its title).
  * A swap made elsewhere (a chip, the pager, Back) ends staging; after a swap the keyboard stays on the dropdown and the
  * H1 follows the page (1.1 H1 template; the title, robots, canonical and description follow in the main component).
  *
@@ -42,6 +43,10 @@ if (!$viewModels->require(Ajax::class)->needsExtras()) {
 
     function bar() {
         return document.querySelector('[data-of-apply-bar]');
+    }
+    <?php /* The apply bar stays at the bottom of the window (Review #1): out of the filter column, whose sticky box would hold it below the products. */ ?>
+    if (bar()) {
+        document.body.append(bar());
     }
 
     function label(count) {
@@ -184,7 +189,52 @@ if (!$viewModels->require(Ajax::class)->needsExtras()) {
         }
     });
 
+    <?php /* Horizontal bar: one row of filters, the rest behind "More filters (N)" (Review #1). */ ?>
+    function overflow() {
+        const horizontal = bar_();
+        const nav = horizontal && horizontal.querySelector('.of-filters__nav');
+        if (!nav) {
+            return;
+        }
+        const groups = [...nav.querySelectorAll(':scope > details.of-group')];
+        let more = nav.querySelector('[data-of-more-filters]');
+        if (!more) {
+            more = document.createElement('button');
+            more.type = 'button';
+            more.className = 'of-more-filters';
+            more.setAttribute('data-of-more-filters', '');
+            more.addEventListener('click', () => {
+                nav.classList.toggle('of-filters__nav--all');
+                overflow();
+            });
+            nav.append(more);
+        }
+        groups.forEach((group) => group.classList.remove('of-group--overflow'));
+        more.hidden = false;
+        if (nav.classList.contains('of-filters__nav--all')) {
+            more.textContent = horizontal.dataset.ofFewer;
+            return;
+        }
+        more.textContent = horizontal.dataset.ofMore.replace('%1', String(groups.length));
+        const top = groups.length ? groups[0].offsetTop : 0;
+        groups.forEach((group) => group.offsetTop > top && group.classList.add('of-group--overflow'));
+        let shown = groups.filter((group) => !group.classList.contains('of-group--overflow'));
+        while (more.offsetTop > top && shown.length > 1) {
+            shown.pop().classList.add('of-group--overflow');
+        }
+        const hidden = groups.length - groups.filter((group) => !group.classList.contains('of-group--overflow')).length;
+        more.hidden = hidden === 0;
+        more.textContent = horizontal.dataset.ofMore.replace('%1', String(hidden));
+    }
+    let resizing = 0;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizing);
+        resizing = setTimeout(overflow, 150);
+    });
+    overflow();
+
     window.addEventListener('openfilter:swapped', (event) => {
+        overflow();
         hide();
         const theirs = event.detail && event.detail.doc && event.detail.doc.querySelector('h1');
         const mine = document.querySelector('h1');

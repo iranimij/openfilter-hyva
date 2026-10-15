@@ -14,6 +14,7 @@ Everything new is opt-in: with the 1.0 settings, the markup and behaviour stay a
 - Sticky sidebar (CSS only).
 - Meta description, and the H1 when an H1 template is set, follow every AJAX swap.
 - The 1.1 behaviour is a separate script printed only on store views that use a mode; the default page keeps the 6 KB budget.
+- Review #1: the desktop apply bar stays at the bottom of the window while something is staged; the horizontal bar keeps one row and shows the rest behind "More filters (N)", with plain carets and wider popovers; next to "all must match" a merchant tooltip opens on demand ("About …"); the main script's comments are no longer sent to browsers (5.7 KB gzipped).
 
 ## [1.0.0] - 2026-10-16
 

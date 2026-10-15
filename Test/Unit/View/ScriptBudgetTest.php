@@ -27,14 +27,15 @@ class ScriptBudgetTest extends TestCase
         self::assertSame(1, preg_match_all('#<script>(.*?)</script>#s', $template, $scripts), 'exactly one script');
         self::assertStringContainsString('</script>' . "\n" . '<?php $hyvaCsp->registerInlineScript() ?>', $template);
 
-        return $scripts[1][0];
+        // What shoppers get: PHP comments inside the script are not printed (they document the code at no cost).
+        return (string) preg_replace('#[ \t]*<\?php /\*.*?\*/ \?>\n?#s', '', $scripts[1][0]);
     }
 
     public function testScriptIsStaticAndCspFriendly(): void
     {
         $script = $this->script();
 
-        self::assertStringNotContainsString('<?', $script, 'no PHP inside the script');
+        self::assertStringNotContainsString('<?', $script, 'no PHP inside the script but comments');
         self::assertDoesNotMatchRegularExpression('/\beval\s*\(|new Function|setTimeout\(\s*[\'"]|innerHTML\s*=/', $script);
     }
 
