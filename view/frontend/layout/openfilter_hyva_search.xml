@@ -42,9 +42,13 @@ same three regions as openfilter_hyva_category.xml, on the catalogsearch blocks 
         </referenceBlock>
         <referenceContainer name="content">
             <container name="openfilter.search.results" htmlTag="div" htmlId="of-results" htmlClass="of-results"
-                       before="search.result"/>
+                       before="search.result">
+                <!-- After the product list: counting earlier would search before the toolbar's sort and page. -->
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.search.count"
+                       template="Iranimij_OpenFilterHyva::layer/count.phtml"/>
+            </container>
         </referenceContainer>
-        <move element="search.result" destination="openfilter.search.results"/>
+        <move element="search.result" destination="openfilter.search.results" before="openfilter.search.count"/>
         <move element="catalogsearch.navigation.state" destination="content" before="openfilter.search.results"/>
     </body>
 </page>

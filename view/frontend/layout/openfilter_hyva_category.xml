@@ -42,9 +42,13 @@ results) and #of-results (a container around the product list block, so empty re
         </referenceBlock>
         <referenceContainer name="content">
             <container name="openfilter.category.results" htmlTag="div" htmlId="of-results" htmlClass="of-results"
-                       before="category.products"/>
+                       before="category.products">
+                <!-- After the product list: counting earlier would search before the toolbar's sort and page. -->
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.category.count"
+                       template="Iranimij_OpenFilterHyva::layer/count.phtml"/>
+            </container>
         </referenceContainer>
-        <move element="category.products" destination="openfilter.category.results"/>
+        <move element="category.products" destination="openfilter.category.results" before="openfilter.category.count"/>
         <move element="catalog.navigation.state" destination="content" before="openfilter.category.results"/>
     </body>
 </page>

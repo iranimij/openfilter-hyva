@@ -1,0 +1,25 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Iranimij\OpenFilterHyva\ViewModel\ResultCount;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * The product count for the AJAX layer's live announcement, the drawer's "Show N products" and the zero-results
+ * undo. Last in #of-results, so it is read after the product list set its sort order and page.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ */
+$count = $viewModels->require(ResultCount::class)->count();
+?>
+<div id="of-count" hidden data-of-count="<?= (int) $count ?>"
+     data-of-announce="<?= $escaper->escapeHtmlAttr($count === 1 ? __('1 product') : __('%1 products', $count)) ?>"></div>

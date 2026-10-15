@@ -37,6 +37,29 @@ class SearchPageTest extends HyvaPageTestCase
         self::assertMatchesRegularExpression('#class="of-chip"[^>]*href="[^"]*q=' . M1Catalog::TOKEN . '#', $html);
     }
 
+    /**
+     * Regression (found by the 1.1 benchmark): the chips used to count the products before the product list, which
+     * ran the search before Magento's toolbar set the sort order and the page: search pages listed every product
+     * in relevance order.
+     */
+    public function testTheListKeepsMagentosPageAndSortOrder(): void
+    {
+        $this->getRequest()->setMethod('GET')->setQueryValue([
+            'q' => M1Catalog::TOKEN, 'product_list_order' => 'price', 'product_list_dir' => 'asc', 'product_list_limit' => '12',
+        ]);
+        $this->dispatch('catalogsearch/result/index');
+        $html = (string) $this->getResponse()->getBody();
+
+        preg_match_all('#class="product-item-link"[^>]*>\s*([^<]+?)\s*<#', $html, $names);
+        $expected = array_map(static fn (int $i): string => 'Ofmone simple ' . $i, range(0, 11));
+        self::assertSame($expected, $names[1], 'twelve products, cheapest first');
+        preg_match('#id="of-count" hidden data-of-count="(\d+)"#', $html, $count);
+        preg_match_all('#<span class="toolbar-number">(\d+)</span>#', $html, $toolbar);
+        self::assertSame(end($toolbar[1]), $count[1] ?? null, 'the count is every product found');
+        self::assertGreaterThan(12, (int) ($count[1] ?? 0));
+        self::assertGreaterThan(strrpos($html, 'product-item-link'), strpos($html, 'id="of-count"'), 'read after the list');
+    }
+
     public function testThePageWithoutFiltersStillNamesTheFilterDialog(): void
     {
         $this->getRequest()->setMethod('GET')->setQueryValue(['q' => 'zzqxnothingmatches']);
