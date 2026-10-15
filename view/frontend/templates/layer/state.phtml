@@ -7,6 +7,7 @@
 declare(strict_types=1);
 
 use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
 use Iranimij\OpenFilter\ViewModel\State;
 use Iranimij\OpenFilterHyva\ViewModel\Ajax;
 use Magento\Framework\Escaper;
@@ -21,13 +22,16 @@ use Magento\LayeredNavigation\Block\Navigation\State as StateBlock;
  * @var StateBlock $block
  * @var Escaper $escaper
  * @var ViewModelRegistry $viewModels
+ * @var HyvaCsp $hyvaCsp
  */
 $stateViewModel = $viewModels->require(State::class);
 $active = $block->getActiveFilters();
 $chips = $stateViewModel->chips($active);
 $ajax = $viewModels->require(Ajax::class)->isEnabled();
+$picks = $stateViewModel->picks($active);
 ?>
 <div id="of-state" class="of-state" data-of-region="state"
+     data-of-picks="<?= $escaper->escapeHtmlAttr((string) json_encode((object) $picks)) ?>"
      data-of-clear-url="<?= $escaper->escapeUrl($stateViewModel->clearUrl($active)) ?>">
 <?php if ($ajax): ?>
     <div class="of-state__bar">
@@ -35,6 +39,7 @@ $ajax = $viewModels->require(Ajax::class)->isEnabled();
                 aria-haspopup="dialog">
             <?= $escaper->escapeHtml($chips === [] ? __('Filter') : __('Filter (%1)', count($chips))) ?>
         </button>
+        <span class="of-state__count" data-of-count-text aria-hidden="true"></span>
     </div>
 <?php endif; ?>
 <?php if ($chips !== []): ?>
@@ -56,6 +61,52 @@ $ajax = $viewModels->require(Ajax::class)->isEnabled();
                 <?= $escaper->escapeHtml(__('Clear all')) ?>
             </a>
         </li>
+        <?php if ($ajax): ?>
+            <li class="of-state__count" data-of-count-text aria-hidden="true"></li>
+        <?php endif; ?>
     </ul>
+<?php endif; ?>
+<?php if ($picks !== []): ?>
+    <script>
+        <?php /* Hyvä's product cards preselect swatches from the query string and expect option ids (?color=49);
+            OpenFilter's URLs carry URL names. Each card that selects a value is corrected to the picked option id
+            (the first one it has) or cleared; the picks are read from #of-state, so they follow every AJAX swap.
+            Printed on filtered pages only. */ ?>
+        if (!window.openFilterCards) {
+            const fix = (el) => {
+                const card = window.Alpine && window.Alpine.$data(el);
+                const state = document.getElementById('of-state');
+                if (!card || !card.optionConfig || typeof card.changeOption !== 'function' || !state) {
+                    return;
+                }
+                const picks = JSON.parse(state.dataset.ofPicks || '{}');
+                Object.values(card.optionConfig.attributes).forEach((attribute) => {
+                    const ids = attribute.options.map((option) => String(option.id));
+                    const id = (picks[attribute.code] || []).find((value) => ids.includes(value)) || '';
+                    const current = (card.selectedValues || {})[attribute.id];
+                    const set = current !== undefined && current !== null && current !== '';
+                    if (id ? String(current) !== id : set && !ids.includes(String(current))) {
+                        <?php /* As Hyvä's own preselect on listings: no gallery update (1.5 has no flag for it). */ ?>
+                        const gallery = card.updateGallery;
+                        card.updateGallery = () => {};
+                        card.changeOption(attribute.id, id, true);
+                        card.updateGallery = gallery;
+                        <?php /* Hyvä 1.5 copies the selection into the product links. */ ?>
+                        typeof card.applySelectionToLinks === 'function' && card.applySelectionToLinks();
+                    }
+                });
+            };
+            const cards = '[x-data^="initConfigurableSwatchOptions"]';
+            window.openFilterCards = () => document.querySelectorAll(cards).forEach(fix);
+            window.addEventListener('listing-configurable-selection-changed', (event) => {
+                const id = event.detail.productId;
+                <?php /* Hyvä 1.4: x-data="initConfigurableSwatchOptions_<id>()"; 1.5: data-product-id="<id>" */ ?>
+                const el = document.querySelector('[x-data="initConfigurableSwatchOptions_' + id + '()"], '
+                    + cards + '[data-product-id="' + id + '"]');
+                el && fix(el);
+            });
+        }
+    </script>
+    <?php $hyvaCsp->registerInlineScript() ?>
 <?php endif; ?>
 </div>
