@@ -16,7 +16,7 @@ use Magento\Framework\View\Element\Template;
  * OpenFilter's one Alpine component: same-URL AJAX for filter links, chips, the pager and the toolbar. It fetches
  * the URL a click would load (so Varnish and the page cache serve it), swaps #of-filters, #of-state and #of-results,
  * updates history and the head, announces the product count and keeps the focus where 08 §4 wants it. Without it,
- * every control is a plain link or form. The script is static (no PHP inside), registered for CSP, and works with
+ * every control is a plain link or form. The script is static (PHP comments only, not printed), registered for CSP, and works with
  * Hyvä's standard and CSP Alpine builds (no inline expressions). A pick in the filters keeps the shopper's place
  * (the next value is one click away); the pager, sorter and chips bring the results into view. After a swap it
  * shows the product count next to the chips and lets layer/state.phtml's script fix the product cards' swatches.
@@ -36,12 +36,12 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
 <script>
 (() => {
     'use strict';
-    // Browsers without a modal <dialog> (Safari < 15.4) keep the filters in place on phones: no drawer, no button.
+    <?php /* Browsers without a modal <dialog> (Safari < 15.4) keep the filters in place on phones: no drawer, no button. */ ?>
     if (!window.HTMLDialogElement || !HTMLDialogElement.prototype.showModal) {
         document.documentElement.classList.add('of-inline');
     }
     const REGIONS = ['of-filters', 'of-state', 'of-results'];
-    const HEAD = ['meta[name="robots"]', 'link[rel="canonical"]', 'link[rel="prev"]', 'link[rel="next"]'];
+    const HEAD = ['meta[name="robots"]', 'meta[name="description"]', 'link[rel="canonical"]', 'link[rel="prev"]', 'link[rel="next"]'];
     const CACHE_SIZE = 10;
     const RANGE = '999999901-999999902'; // Slider::PLACEHOLDER (core view model)
     const cache = new Map();
@@ -87,7 +87,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         return REGIONS.every((id) => doc.getElementById(id)) ? doc : null;
     }
 
-    // Inline scripts of swapped markup (product cards) run once per distinct script; JSON stays data.
+    <?php /* Inline scripts of swapped markup (product cards) run once per distinct script; JSON stays data. */ ?>
     function runScripts(root) {
         root.querySelectorAll('script').forEach((old) => {
             const type = old.getAttribute('type');
@@ -138,7 +138,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         });
         regions.forEach((id) => window.Alpine.initTree(document.getElementById(id)));
         cards();
-        // Hyvä fills form keys (add to cart, compare) on page load only.
+        <?php /* Hyvä fills form keys (add to cart, compare) on page load only. */ ?>
         if (window.hyva && typeof window.hyva.initFormKey === 'function') {
             window.hyva.initFormKey();
         }
@@ -211,7 +211,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         }
     }
 
-    // Zero results only come from ranges or typed URLs (08 §2): offer one click back.
+    <?php /* Zero results only come from ranges or typed URLs (08 §2): offer one click back. */ ?>
     function offerUndo(from) {
         const count = document.getElementById('of-count');
         const state = document.getElementById('of-state');
@@ -233,6 +233,10 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
     async function navigate(url, options = {}) {
         if (drawer && !options.apply) {
             stage(url, options);
+            return;
+        }
+        <?php /* Desktop apply mode (js/extras.phtml) */ ?>
+        if (!options.apply && options.group && window.openFilterStage && window.openFilterStage(url, options)) {
             return;
         }
         if (controller) {
@@ -271,7 +275,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             }
             focus(options);
             scroll(options);
-            window.dispatchEvent(new CustomEvent('openfilter:swapped', {detail: {url: entry.url}}));
+            window.dispatchEvent(new CustomEvent('openfilter:swapped', {detail: {url: entry.url, doc}}));
         } catch (error) {
             if (error.name !== 'AbortError') {
                 location.href = url;
@@ -284,8 +288,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         }
     }
 
-    // Mobile drawer (08 §3, 10 FE8): the filter dialog as a modal; changes are staged and prefetched, so "Show N
-    // products" knows N and Apply swaps the prefetched page without another request.
+    <?php /* Mobile drawer (08 §3, 10 FE8): the filter dialog as a modal; changes are staged and prefetched, so "Show N products" knows N and Apply swaps the prefetched page without another request. */ ?>
     const byId = (id) => document.getElementById(id);
 
     function footer(count, doc = document) {
@@ -401,7 +404,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         }
     }
 
-    // Range sliders (10 FE7): two range inputs on one track and two number fields, applied on release.
+    <?php /* Range sliders (10 FE7): two range inputs on one track and two number fields, applied on release. */ ?>
     const sliderPart = (form, role) => ({
         range: form.querySelector('[data-of-range="' + role + '"]'),
         number: form.querySelector('[data-of-number="' + role + '"]')
@@ -519,7 +522,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         return location.origin + location.pathname + (query ? '?' + query : '');
     }
 
-    // Hyvä's toolbar (sorter, limiter, view mode) sets location.href from Alpine: route it through the swap.
+    <?php /* Hyvä's toolbar (sorter, limiter, view mode) sets location.href from Alpine: route it through the swap. */ ?>
     function adoptToolbar(event) {
         const toolbar = event.target.closest && event.target.closest('#of-results [x-data^="initToolbar"]');
         if (!toolbar || toolbar.dataset.ofToolbar) {
@@ -619,7 +622,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         document.addEventListener('submit', onSliderSubmit);
         paintSliders();
         window.addEventListener('popstate', onPopState);
-        // Each history entry keeps its own scroll position, so Back and Forward restore it after the swap.
+        <?php /* Each history entry keeps its own scroll position, so Back and Forward restore it after the swap. */ ?>
         let saving = 0;
         window.addEventListener('scroll', () => {
             clearTimeout(saving);
@@ -627,7 +630,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
                 history.replaceState(Object.assign({}, history.state, {scroll: window.scrollY}), '');
             }, 150);
         }, {passive: true});
-        window.openFilter = {navigate};
+        window.openFilter = {navigate, load, parse, swap, paintSliders, focus};
         document.addEventListener('alpine:initialized', cards);
     }
 

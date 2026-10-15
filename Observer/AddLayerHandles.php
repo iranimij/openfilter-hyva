@@ -41,7 +41,7 @@ class AddLayerHandles implements ObserverInterface
     }
 
     /**
-     * Add OpenFilter's handles on layered category and search pages.
+     * Add OpenFilter's handles on layered category and search pages (and the horizontal layout's, 1.1).
      *
      * @param Observer $observer
      * @return void
@@ -54,10 +54,14 @@ class AddLayerHandles implements ObserverInterface
         }
         $update = $layout->getUpdate();
         $handles = $update->getHandles();
+        $horizontal = $this->config->getLayout() === Config::LAYOUT_HORIZONTAL;
         foreach (self::PAGES as $page => $handle) {
             if (in_array($page, $handles, true)) {
                 $update->addHandle(self::HANDLE);
                 $update->addHandle($handle);
+                if ($horizontal) {
+                    $update->addHandle(str_replace('openfilter_hyva_', 'openfilter_hyva_horizontal_', $handle));
+                }
             }
         }
     }

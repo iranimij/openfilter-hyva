@@ -8,7 +8,10 @@ declare(strict_types=1);
 
 namespace Iranimij\OpenFilterHyva\ViewModel;
 
+use Iranimij\OpenFilter\Api\Data\FilterConfigInterface;
 use Iranimij\OpenFilter\Model\Config;
+use Iranimij\OpenFilter\Model\Config\FilterConfigProvider;
+use Magento\Store\Model\StoreManagerInterface;
 use Magento\Framework\View\Element\Block\ArgumentInterface;
 
 /**
@@ -18,9 +21,13 @@ class Ajax implements ArgumentInterface
 {
     /**
      * @param Config $config
+     * @param FilterConfigProvider $filters
+     * @param StoreManagerInterface $storeManager
      */
     public function __construct(
-        private readonly Config $config
+        private readonly Config $config,
+        private readonly FilterConfigProvider $filters,
+        private readonly StoreManagerInterface $storeManager
     ) {
     }
 
@@ -30,5 +37,32 @@ class Ajax implements ArgumentInterface
     public function isEnabled(): bool
     {
         return $this->config->isEnabled() && $this->config->isAjaxEnabled();
+    }
+
+    /**
+     * The 1.1 extras script (desktop "Show N products", dropdowns that load on change, the horizontal bar's
+     * popovers, the H1 template after swaps) is printed only where a store
+     * view uses one of them, so the default page keeps its script budget.
+     *
+     * @return bool
+     */
+    public function needsExtras(): bool
+    {
+        if (!$this->isEnabled()) {
+            return false;
+        }
+        $storeId = (int) $this->storeManager->getStore()->getId();
+        if ($this->config->getApplyMode($storeId) === Config::APPLY_BUTTON
+            || $this->config->getLayout($storeId) === Config::LAYOUT_HORIZONTAL
+            || $this->config->getH1Template($storeId) !== '') {
+            return true;
+        }
+        foreach ($this->filters->getActive($storeId) as $filter) {
+            if ($filter->getDisplayMode() === FilterConfigInterface::DISPLAY_DROPDOWN) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

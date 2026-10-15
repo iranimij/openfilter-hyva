@@ -39,6 +39,20 @@ $debug = $viewModels->require(Debug::class);
         <?php endif; ?>
     </summary>
     <div class="of-group__body" id="<?= $escaper->escapeHtmlAttr($id) ?>">
+        <?php /* "Match all" is one line; a merchant tooltip next to it opens on demand, alone it stays in view. */ ?>
+        <?php if ($group->isMatchAll()): ?>
+            <p class="of-group__hint">
+                <span class="of-group__match"><?= $escaper->escapeHtml(__('Products have all picked values.')) ?></span>
+            </p>
+            <?php if ($group->getTooltip() !== null): ?>
+                <details class="of-about">
+                    <summary><?= $escaper->escapeHtml(__('About %1', $group->getLabel())) ?></summary>
+                    <p class="of-group__hint"><?= $escaper->escapeHtml((string) $group->getTooltip()) ?></p>
+                </details>
+            <?php endif; ?>
+        <?php elseif ($group->getTooltip() !== null): ?>
+            <p class="of-group__hint"><?= $escaper->escapeHtml((string) $group->getTooltip()) ?></p>
+        <?php endif; ?>
         <?= /* @noEscape */ $options ? $options->setData('group', $group)->setData('group_id', $id)->toHtml() : '' ?>
     </div>
 </details>
