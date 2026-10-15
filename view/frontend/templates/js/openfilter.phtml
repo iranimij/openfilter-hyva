@@ -17,7 +17,9 @@ use Magento\Framework\View\Element\Template;
  * the URL a click would load (so Varnish and the page cache serve it), swaps #of-filters, #of-state and #of-results,
  * updates history and the head, announces the product count and keeps the focus where 08 §4 wants it. Without it,
  * every control is a plain link or form. The script is static (no PHP inside), registered for CSP, and works with
- * Hyvä's standard and CSP Alpine builds (no inline expressions).
+ * Hyvä's standard and CSP Alpine builds (no inline expressions). A pick in the filters keeps the shopper's place
+ * (the next value is one click away); the pager, sorter and chips bring the results into view. After a swap it
+ * shows the product count next to the chips and lets layer/state.phtml's script fix the product cards' swatches.
  *
  * @var Template $block
  * @var Escaper $escaper
@@ -135,10 +137,18 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             reopen(open);
         });
         regions.forEach((id) => window.Alpine.initTree(document.getElementById(id)));
+        cards();
         // Hyvä fills form keys (add to cart, compare) on page load only.
         if (window.hyva && typeof window.hyva.initFormKey === 'function') {
             window.hyva.initFormKey();
         }
+    }
+
+    function cards() {
+        document.querySelectorAll('[data-of-count-text]').forEach((el) => {
+            el.textContent = byId('of-count')?.dataset.ofAnnounce || '';
+        });
+        window.openFilterCards?.();
     }
 
     function syncHead(doc) {
@@ -196,7 +206,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             return;
         }
         const region = document.getElementById('of-results');
-        if (region.getBoundingClientRect().top < 0) {
+        if (options.focus !== 'option' && region.getBoundingClientRect().top < 0) {
             region.scrollIntoView({block: 'start'});
         }
     }
@@ -278,10 +288,11 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
     // products" knows N and Apply swaps the prefetched page without another request.
     const byId = (id) => document.getElementById(id);
 
-    function footer(count) {
+    function footer(count, doc = document) {
         const dialog = byId('of-drawer');
         const apply = dialog.querySelector('[data-of-drawer-apply]');
         apply.textContent = count === '1' ? dialog.dataset.ofShowOne : dialog.dataset.ofShow.replace('%1', count);
+        dialog.querySelector('[data-of-drawer-clear]').hidden = !doc.querySelector('#of-state .of-chip');
     }
 
     function openDrawer() {
@@ -342,7 +353,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
                         drawer.staged = entry.url;
                         swap(doc, ['of-filters']);
                         paintSliders();
-                        footer(doc.getElementById('of-count')?.dataset.ofCount);
+                        footer(doc.getElementById('of-count')?.dataset.ofCount, doc);
                         focus(options);
                     }
                 } catch (error) {
@@ -617,6 +628,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
             }, 150);
         }, {passive: true});
         window.openFilter = {navigate};
+        document.addEventListener('alpine:initialized', cards);
     }
 
     document.addEventListener('alpine:init', () => {
