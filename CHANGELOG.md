@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.0-rc1] - 2026-10-15
 
 First release: OpenFilter's storefront for Hyvä 1.4 and 1.5 (requires `iranimij/openfilter` and `hyva-themes/magento2-theme-module` ^1.3).
 
