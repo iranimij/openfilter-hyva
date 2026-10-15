@@ -27,7 +27,8 @@ class AjaxComponentTest extends HyvaPageTestCase
         self::assertSame(1, substr_count($html, 'x-data="openFilter"'));
         self::assertSame(1, substr_count($html, "Alpine.data('openFilter'"));
         self::assertMatchesRegularExpression('#<a class="of-option[^"]*"\s+href="[^"]+" data-of-link data-of-value="\d+"#', $html);
-        self::assertMatchesRegularExpression('#id="of-state"[^>]*data-of-count="\d+"[^>]*data-of-announce="\d+(?: |&\#x20;)products?"#', $html);
+        self::assertMatchesRegularExpression('#id="of-results".*<div id="of-count" hidden data-of-count="\d+"\s+data-of-announce="\d+(?: |&\#x20;)products?"></div>#s', $html);
+        self::assertDoesNotMatchRegularExpression('#id="of-state"[^>]*data-of-count#', $html);
         self::assertMatchesRegularExpression('#<dialog id="of-drawer" class="of-drawer of-drawer--js" open#', $html);
         self::assertMatchesRegularExpression('#<dialog id="of-drawer".*?<div id="of-filters".*?data-of-drawer-apply.*?</dialog>#s', $html);
         self::assertStringContainsString('data-of-drawer-open', $html);

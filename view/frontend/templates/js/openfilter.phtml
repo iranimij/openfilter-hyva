@@ -156,13 +156,13 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
     }
 
     function announce() {
-        const state = document.getElementById('of-state');
-        if (!live || !state) {
+        const count = document.getElementById('of-count');
+        if (!live || !count) {
             return;
         }
         live.textContent = '';
         setTimeout(() => {
-            live.textContent = state.dataset.ofAnnounce || '';
+            live.textContent = count.dataset.ofAnnounce || '';
         }, 50);
     }
 
@@ -203,8 +203,9 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
 
     // Zero results only come from ranges or typed URLs (08 §2): offer one click back.
     function offerUndo(from) {
+        const count = document.getElementById('of-count');
         const state = document.getElementById('of-state');
-        if (!state || state.dataset.ofCount !== '0' || !from || !live) {
+        if (!count || !state || count.dataset.ofCount !== '0' || !from || !live) {
             return;
         }
         const notice = document.createElement('p');
@@ -294,7 +295,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
         dialog.setAttribute('data-of-modal', '');
         dialog.showModal();
         document.documentElement.classList.add('of-locked');
-        footer(state.dataset.ofCount);
+        footer(byId('of-count')?.dataset.ofCount);
         dialog.querySelector('[data-of-drawer-clear]').href = state.dataset.ofClearUrl;
         history.pushState(Object.assign({}, history.state, {drawer: true}), '');
     }
@@ -341,7 +342,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
                         drawer.staged = entry.url;
                         swap(doc, ['of-filters']);
                         paintSliders();
-                        footer(doc.getElementById('of-state').dataset.ofCount);
+                        footer(doc.getElementById('of-count')?.dataset.ofCount);
                         focus(options);
                     }
                 } catch (error) {
