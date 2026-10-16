@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace Iranimij\OpenFilterHyva\Test\Integration;
 
+use Iranimij\OpenFilter\Model\Config\OptionImages;
 use Iranimij\OpenFilter\Api\Data\FilterConfigInterface;
 use Iranimij\OpenFilter\Api\FilterConfigRepositoryInterface;
 use Iranimij\OpenFilter\Test\Integration\Catalog\M1Catalog;
@@ -62,6 +63,27 @@ class OptionTemplatesTest extends HyvaPageTestCase
         );
         self::assertStringContainsString('<span class="of-swatch__visual of-swatch__text" aria-hidden="true">Blue</span>', $group);
         self::assertDoesNotMatchRegularExpression('#\sstyle=#', $group);
+    }
+
+    public function testTheImagesDisplayShowsTheMerchantsOptionImages(): void
+    {
+        $images = Bootstrap::getObjectManager()->get(OptionImages::class);
+        $red = self::$catalog['options'][M1Catalog::COLOR]['Red'];
+        $images->save([$red => 'r/e/red.png']);
+        $this->colour(FilterConfigInterface::DISPLAY_IMAGES);
+        try {
+            $group = $this->group($this->page([]), M1Catalog::COLOR);
+        } finally {
+            $images->save([$red => null]);
+        }
+
+        self::assertMatchesRegularExpression(
+            '#<a class="of-swatch" href="[^"]*' . M1Catalog::COLOR . '=red"[^>]*><img class="of-swatch__visual" '
+            . 'src="[^"]*/openfilter/options/r/e/red\.png" alt="" width="36" height="36" loading="lazy">'
+            . '<span class="of-swatch__label">Red</span>#',
+            $group
+        );
+        self::assertStringContainsString('<span class="of-swatch__visual of-swatch__text" aria-hidden="true">Blue</span>', $group);
     }
 
     public function testShowMoreHoldsTheOptionsBeyondTheVisibleCount(): void

@@ -17,7 +17,8 @@ use Magento\Framework\View\Element\Template;
 
 /**
  * Swatches with a visible label: colours as SVG fills (no inline styles under CSP), images as <img>, text swatches
- * as text. Colour is never the only signal: label, count and a check mark when selected.
+ * as text. Colour is never the only signal: label, count and a check mark when selected. Also renders the "Images"
+ * display type (1.2): the merchant's option images, text for options without one.
  *
  * @var Template $block
  * @var Escaper $escaper
