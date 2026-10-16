@@ -1,0 +1,144 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
+use Iranimij\OpenFilter\Model\Config;
+use Iranimij\OpenFilterHyva\ViewModel\Ajax;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * "More products" (1.2), printed only where a store view chose "Load more" or "As shoppers scroll": a button after
+ * the product list fetches the pager's next page (the same cacheable URL), appends its products, runs their scripts
+ * and takes over its pager. "As shoppers scroll" presses the button for two pages, then leaves it to the shopper so
+ * the footer stays reachable. The pager's links stay for search engines and without JavaScript; coming Back to the
+ * page loads the same pages again. Uses window.openFilter (js/openfilter.phtml); the mode and texts come from
+ * #of-more-config, so the script itself stays static.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ * @var HyvaCsp $hyvaCsp
+ */
+$mode = $viewModels->require(Ajax::class)->pagination();
+if ($mode === Config::PAGINATION_PAGES) {
+    return;
+}
+?>
+<div id="of-more-config" hidden data-mode="<?= $escaper->escapeHtmlAttr($mode) ?>"
+     data-label="<?= $escaper->escapeHtmlAttr(__('Load more products')) ?>"
+     data-loading="<?= $escaper->escapeHtmlAttr(__('Loading…')) ?>"
+     data-added="<?= $escaper->escapeHtmlAttr(__('%1 more products', '%1')) ?>"></div>
+<script>
+(() => {
+    'use strict';
+    const config = document.getElementById('of-more-config').dataset;
+    const KEY = 'of-more';
+    let button = null;
+    let observer = null;
+    let auto = 0;
+    const list = (root) => root.querySelector('#of-results .products.wrapper > ul, #of-results ol.product-items');
+    const next = (root) => root.querySelector('#of-results a.pages-item-next:not([aria-disabled]), #of-results .pages-item-next a, #of-results a.action.next');
+    const saved = () => {
+        try {
+            const data = JSON.parse(sessionStorage.getItem(KEY) || '{}');
+            return data.url === location.href ? data.urls : [];
+        } catch (e) {
+            return [];
+        }
+    };
+    const save = (urls) => {
+        try {
+            sessionStorage.setItem(KEY, JSON.stringify({url: location.href, urls}));
+        } catch (e) {}
+    };
+
+    async function more(url, quiet) {
+        const of = window.openFilter;
+        const here = list(document);
+        button.disabled = true;
+        button.textContent = config.loading;
+        try {
+            const doc = of.parse((await of.load(url)).html);
+            const items = doc && list(doc);
+            if (!items || !here) {
+                throw new Error('OpenFilter: no products');
+            }
+            const added = [...items.children];
+            here.append(...added);
+            const pagers = doc.querySelectorAll('#of-results .pages');
+            document.querySelectorAll('#of-results .pages').forEach((pager, i) => pagers[i] && pager.replaceWith(pagers[i]));
+            of.run(here);
+            window.openFilterCards?.();
+            save([...saved(), url]);
+            const live = document.querySelector('[data-of-live]');
+            if (live) {
+                live.textContent = config.added.replace('%1', String(added.length));
+            }
+            if (!quiet) {
+                added[0]?.querySelector('a[href]')?.focus({preventScroll: true});
+            }
+            setup();
+        } catch (e) {
+            location.href = url;
+        }
+    }
+
+    function setup() {
+        observer?.disconnect();
+        button?.remove();
+        button = null;
+        const link = next(document);
+        const items = list(document);
+        if (!link || !items || !window.openFilter) {
+            return;
+        }
+        button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'of-more-products';
+        button.textContent = config.label;
+        button.addEventListener('click', () => more(link.href));
+        items.after(button);
+        if (config.mode === 'infinite' && auto < 2 && window.IntersectionObserver) {
+            observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && auto < 2) {
+                    auto++;
+                    more(link.href, true);
+                }
+            }, {rootMargin: '400px'});
+            observer.observe(button);
+        }
+    }
+
+    async function start() {
+        window.addEventListener('openfilter:swapped', () => {
+            auto = 0;
+            save([]);
+            setup();
+        });
+        setup();
+        const urls = saved();
+        save([]);
+        for (const url of urls) {
+            if (!button) {
+                break;
+            }
+            await more(url, true);
+        }
+    }
+
+    <?php /* window.openFilter exists once Alpine has started the main component. */ ?>
+    if (window.openFilter) {
+        start();
+    } else {
+        document.addEventListener('alpine:initialized', start, {once: true});
+    }
+})();
+</script>
+<?php $hyvaCsp->registerInlineScript() ?>

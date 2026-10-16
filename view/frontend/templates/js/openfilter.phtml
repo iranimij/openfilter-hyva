@@ -630,7 +630,7 @@ if (!$viewModels->require(Ajax::class)->isEnabled()) {
                 history.replaceState(Object.assign({}, history.state, {scroll: window.scrollY}), '');
             }, 150);
         }, {passive: true});
-        window.openFilter = {navigate, load, parse, swap, paintSliders, focus};
+        window.openFilter = {navigate, load, parse, swap, paintSliders, focus, run: runScripts};
         document.addEventListener('alpine:initialized', cards);
     }
 

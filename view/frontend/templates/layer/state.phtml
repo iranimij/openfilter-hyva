@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 use Hyva\Theme\Model\ViewModelRegistry;
 use Hyva\Theme\ViewModel\HyvaCsp;
+use Iranimij\OpenFilter\ViewModel\QuickBar;
 use Iranimij\OpenFilter\ViewModel\State;
 use Iranimij\OpenFilterHyva\ViewModel\Ajax;
 use Magento\Framework\Escaper;
@@ -17,7 +18,9 @@ use Magento\LayeredNavigation\Block\Navigation\State as StateBlock;
  * Active filters as chips above the results (#of-state; always printed, so the AJAX layer has a region to swap; the
  * product count is printed after the product list, layer/count.phtml):
  * "Colour: Blue ×" links that remove one value, and "Clear all". On phones, with the AJAX component, a sticky
- * "Filter (N)" button opens the filter drawer (its space is part of the region from the first paint).
+ * "Filter (N)" button opens the filter drawer (its space is part of the region from the first paint). The quick filter bar
+ * (1.2, when the merchant sets a size) lists one-click links to values of the filters marked for it, so it follows every
+ * swap too.
  *
  * @var StateBlock $block
  * @var Escaper $escaper
@@ -29,6 +32,7 @@ $active = $block->getActiveFilters();
 $chips = $stateViewModel->chips($active);
 $ajax = $viewModels->require(Ajax::class)->isEnabled();
 $picks = $stateViewModel->picks($active);
+$quick = $viewModels->require(QuickBar::class)->items();
 ?>
 <div id="of-state" class="of-state" data-of-region="state"
      data-of-picks="<?= $escaper->escapeHtmlAttr((string) json_encode((object) $picks)) ?>"
@@ -41,6 +45,24 @@ $picks = $stateViewModel->picks($active);
         </button>
         <span class="of-state__count" data-of-count-text aria-hidden="true"></span>
     </div>
+<?php endif; ?>
+<?php if ($quick !== []): ?>
+    <nav class="of-quick" aria-label="<?= $escaper->escapeHtmlAttr(__('Quick filters')) ?>">
+        <ul class="of-quick__list">
+        <?php foreach ($quick as $item): ?>
+            <?php $option = $item->getOption(); ?>
+            <li><a class="of-quick__link<?= $option->isSelected() ? ' of-quick__link--selected' : '' ?>"
+                   href="<?= $escaper->escapeUrl($option->getUrl()) ?>" data-of-link
+                   title="<?= $escaper->escapeHtmlAttr($item->getFilterLabel()) ?>"
+                   <?= $option->isSelected() ? 'aria-current="true"' : '' ?>
+                   <?= $option->getRel() !== '' ? 'rel="' . $escaper->escapeHtmlAttr($option->getRel()) . '"' : '' ?>>
+                <span class="of-sr"><?= $escaper->escapeHtml($item->getFilterLabel()) ?>:</span>
+                <?= $escaper->escapeHtml($option->getLabel()) ?>
+                <span class="of-quick__count"><?= (int) $option->getCount() ?><span class="of-sr"> <?= $escaper->escapeHtml(__('products')) ?></span></span>
+            </a></li>
+        <?php endforeach; ?>
+        </ul>
+    </nav>
 <?php endif; ?>
 <?php if ($chips !== []): ?>
     <h2 class="of-sr"><?= $escaper->escapeHtml(__('Now Shopping by')) ?></h2>

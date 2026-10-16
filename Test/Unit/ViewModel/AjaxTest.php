@@ -57,13 +57,21 @@ class AjaxTest extends TestCase
         self::assertSame($expected, $this->ajax(true, $ajax, $apply, $layout, $display, $h1)->needsExtras());
     }
 
+    public function testMoreProductsFollowTheSettingAndNeedTheAjaxComponent(): void
+    {
+        self::assertSame('pages', $this->ajax(true, true)->pagination(), '1.1 behaviour by default');
+        self::assertSame('infinite', $this->ajax(true, true, pagination: 'infinite')->pagination());
+        self::assertSame('pages', $this->ajax(true, false, pagination: 'load_more')->pagination(), 'no AJAX: the pager');
+    }
+
     private function ajax(
         bool $enabled,
         bool $ajax,
         string $apply = 'instant',
         string $layout = 'sidebar',
         string $display = 'list',
-        string $h1 = ''
+        string $h1 = '',
+        string $pagination = 'pages'
     ): Ajax {
         $config = $this->createStub(Config::class);
         $config->method('isEnabled')->willReturn($enabled);
@@ -71,6 +79,7 @@ class AjaxTest extends TestCase
         $config->method('getApplyMode')->willReturn($apply);
         $config->method('getLayout')->willReturn($layout);
         $config->method('getH1Template')->willReturn($h1);
+        $config->method('getPagination')->willReturn($pagination);
         $filters = $this->createStub(FilterConfigProvider::class);
         $filters->method('getActive')->willReturn([
             'climate' => (new Defaults())->forAttribute('climate', 90, 'multiselect', null, 10)->setDisplayMode($display),
