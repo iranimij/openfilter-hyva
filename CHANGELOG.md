@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-10-16
+
+No changes since 1.1.0-rc1.
+
 ## [1.1.0-rc1] - 2026-10-16
 
 Everything new is opt-in: with the 1.0 settings, the markup and behaviour stay as they were.
