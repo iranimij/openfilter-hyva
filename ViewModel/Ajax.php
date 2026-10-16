@@ -65,4 +65,16 @@ class Ajax implements ArgumentInterface
 
         return false;
     }
+
+    /**
+     * How shoppers see more products (1.2): Config::PAGINATION_PAGES (no script), _LOAD_MORE or _INFINITE.
+     *
+     * @return string
+     */
+    public function pagination(): string
+    {
+        return $this->isEnabled()
+            ? $this->config->getPagination((int) $this->storeManager->getStore()->getId())
+            : Config::PAGINATION_PAGES;
+    }
 }

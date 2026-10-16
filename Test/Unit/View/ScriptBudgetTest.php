@@ -21,6 +21,8 @@ class ScriptBudgetTest extends TestCase
 
     private const EXTRAS = __DIR__ . '/../../../view/frontend/templates/js/extras.phtml';
 
+    private const MORE = __DIR__ . '/../../../view/frontend/templates/js/more.phtml';
+
     private function script(string $file = self::FILE): string
     {
         $template = (string) file_get_contents($file);
@@ -60,5 +62,15 @@ class ScriptBudgetTest extends TestCase
         self::assertLessThanOrEqual(2048, strlen((string) gzencode($extras, 9)), 'the 1.1 extras stay under 2 KB');
         self::assertStringContainsString('window.openFilterStage', $extras, 'the hook the main component calls');
         self::assertStringContainsString('window.openFilterStage', $this->script(), 'the main component calls it');
+    }
+
+    public function testThe12MoreProductsScriptIsStaticCspFriendlyAndSmall(): void
+    {
+        $more = $this->script(self::MORE);
+
+        self::assertStringNotContainsString('<?', $more, 'the mode and texts come from #of-more-config');
+        self::assertDoesNotMatchRegularExpression('/\beval\s*\(|new Function|setTimeout\(\s*[\'"]|innerHTML\s*=/', $more);
+        self::assertLessThanOrEqual(1536, strlen((string) gzencode($more, 9)), '"More products" stays under 1.5 KB');
+        self::assertStringContainsString('run: runScripts', $this->script(), 'the main component lends its script runner');
     }
 }

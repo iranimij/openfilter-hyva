@@ -47,9 +47,19 @@ class StorefrontModesTest extends HyvaPageTestCase
         $html = $this->page([]);
 
         foreach (['of-drawer--horizontal', 'of-drawer--sticky', 'data-of-apply-bar', 'of-group__hint', 'of-dropdown',
-            'window.openFilterStage = '] as $part) {
+            'window.openFilterStage = ', 'of-more-config', 'of-quick'] as $part) {
             self::assertStringNotContainsString($part, $html, $part);
         }
+    }
+
+    public function testMoreProductsPrintTheirScriptOnlyWhenChosen(): void
+    {
+        $this->config('openfilter/display/pagination', 'infinite');
+
+        $html = $this->page([]);
+
+        self::assertMatchesRegularExpression('#<div id="of-more-config" hidden data-mode="infinite"#', $html);
+        self::assertSame(1, substr_count($html, "document.getElementById('of-more-config')"), 'one static script');
     }
 
     public function testADropdownIsAGetFormThatKeepsTheOtherFilters(): void

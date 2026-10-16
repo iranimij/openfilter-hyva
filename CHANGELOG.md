@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 - The *Images* display type (1.2): options drawn as the merchant's option images with their label and count, using the swatch template; options without an image show their label.
+- More products (1.2): `js/more.phtml` (about 1.1 KB, printed only when *More products* is not the pager) appends the next page's products with a button or as shoppers scroll; `window.openFilter.run` runs the scripts of added product cards.
 - Quick filter bar (1.2): `nav.of-quick` at the top of `#of-state` with links to values of the filters marked for it, refreshed by every swap.
 
 ## [1.1.0] - 2026-10-16
