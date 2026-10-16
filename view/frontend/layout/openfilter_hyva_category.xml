@@ -35,6 +35,8 @@ results) and #of-results (a container around the product list block, so empty re
                        template="Iranimij_OpenFilterHyva::layer/filter/slider.phtml"/>
                 <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.dropdown" as="dropdown"
                        template="Iranimij_OpenFilterHyva::layer/filter/dropdown.phtml"/>
+                <block class="Magento\Framework\View\Element\Template" name="openfilter.category.filter.images" as="images"
+                       template="Iranimij_OpenFilterHyva::layer/filter/swatch.phtml"/>
             </block>
         </referenceBlock>
         <referenceBlock name="catalog.navigation.state">
