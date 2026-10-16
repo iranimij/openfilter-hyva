@@ -8,8 +8,9 @@ if [ -n "${GITHUB_TOKEN:-}" ]; then
     composer config -g github-oauth.github.com "$GITHUB_TOKEN"
 fi
 
-# Until iranimij/openfilter is on Packagist, CI resolves it from GitHub, at the branch named in
-# .github/ci/openfilter-ref ("main" while nothing is stacked), aliased 1.0.x-dev so it satisfies "^1.0".
+# CI resolves iranimij/openfilter from GitHub, at the branch named in .github/ci/openfilter-ref ("main" while nothing
+# is stacked), aliased with that branch's own version (its dev-main branch alias, e.g. 1.2.x-dev), so a feature branch
+# satisfies "^1.1" as main does.
 composer config repositories.iranimij-openfilter vcs https://github.com/iranimij/openfilter
 # Hyvä's theme module (required: \$hyvaCsp, view models, theme detection) is OSL but not on packagist.org: its public
 # GitHub repositories serve it and the bundle it requires.
@@ -26,7 +27,10 @@ for ref_file in "$(dirname "$0")/openfilter-ref" "${GITHUB_WORKSPACE:-/github/wo
         break
     fi
 done
-composer require --no-update --no-interaction "iranimij/openfilter:dev-${OPENFILTER_REF:-main} as 1.0.x-dev"
+OPENFILTER_VERSION="$(php -r '$c = json_decode((string) @file_get_contents($argv[1]), true);
+    echo $c["extra"]["branch-alias"]["dev-main"] ?? "1.0.x-dev";' \
+    "https://raw.githubusercontent.com/iranimij/openfilter/${OPENFILTER_REF:-main}/composer.json")"
+composer require --no-update --no-interaction "iranimij/openfilter:dev-${OPENFILTER_REF:-main} as ${OPENFILTER_VERSION}"
 
 # PHPStan job only: the Magento-aware PHPStan extension (factories, proxies, generated classes).
 if [ -n "${INPUT_PHPSTAN_LEVEL:-}" ]; then
