@@ -23,6 +23,8 @@ class ScriptBudgetTest extends TestCase
 
     private const MORE = __DIR__ . '/../../../view/frontend/templates/js/more.phtml';
 
+    private const INSIGHTS = __DIR__ . '/../../../view/frontend/templates/js/insights.phtml';
+
     private function script(string $file = self::FILE): string
     {
         $template = (string) file_get_contents($file);
@@ -72,5 +74,16 @@ class ScriptBudgetTest extends TestCase
         self::assertDoesNotMatchRegularExpression('/\beval\s*\(|new Function|setTimeout\(\s*[\'"]|innerHTML\s*=/', $more);
         self::assertLessThanOrEqual(1536, strlen((string) gzencode($more, 9)), '"More products" stays under 1.5 KB');
         self::assertStringContainsString('run: runScripts', $this->script(), 'the main component lends its script runner');
+    }
+
+    public function testThe12InsightsScriptIsStaticCspFriendlyAndTiny(): void
+    {
+        $insights = $this->script(self::INSIGHTS);
+
+        self::assertStringNotContainsString('<?', $insights, 'the address and values come from #of-insights');
+        self::assertDoesNotMatchRegularExpression('/\beval\s*\(|new Function|setTimeout\(\s*[\'"]|innerHTML\s*=/', $insights);
+        self::assertDoesNotMatchRegularExpression('/cookie|localStorage|sessionStorage|userAgent|referrer/i', $insights, 'nothing about the shopper');
+        self::assertLessThanOrEqual(768, strlen((string) gzencode($insights, 9)), 'insights stay under 768 B');
+        self::assertStringContainsString("'openfilter:swapped'", $this->script(), 'the main component announces swaps');
     }
 }

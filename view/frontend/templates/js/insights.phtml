@@ -1,0 +1,51 @@
+<?php
+/**
+ * Copyright © Iman Aboheydary. All rights reserved.
+ * See LICENSE for license details (MIT).
+ */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
+use Iranimij\OpenFilter\ViewModel\Insights;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * Merchant insights (1.2), printed only where a store view collects them: one beacon after the page loads and one
+ * after each filter swap, with the store view, category, active filters and a bucket of the product count (see
+ * docs/insights.md of the core module). Nothing about the shopper is read or sent; no cookie or storage is set. The
+ * page's values come from #of-insights (in the fetched page after a swap), so the script itself stays static.
+ *
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ * @var HyvaCsp $hyvaCsp
+ */
+$insights = $viewModels->require(Insights::class);
+if (!$insights->isEnabled()) {
+    return;
+}
+?>
+<div id="of-insights" hidden data-url="<?= $escaper->escapeUrl($insights->endpoint()) ?>"
+     data-payload="<?= $escaper->escapeHtmlAttr($insights->payload()) ?>"></div>
+<script>
+(() => {
+    'use strict';
+    const send = (doc) => {
+        const config = doc.getElementById('of-insights');
+        if (!config || !navigator.sendBeacon) {
+            return;
+        }
+        const payload = JSON.parse(config.dataset.payload);
+        const count = Number(doc.getElementById('of-count')?.dataset.ofCount ?? NaN);
+        <?php /* 0 none, 1 up to 10, 2 up to 100, 3 more, -1 unknown */ ?>
+        payload.b = Number.isNaN(count) ? -1 : count === 0 ? 0 : count <= 10 ? 1 : count <= 100 ? 2 : 3;
+        navigator.sendBeacon(config.dataset.url, JSON.stringify(payload));
+    };
+    send(document);
+    window.addEventListener('openfilter:swapped', (event) => send(event.detail.doc));
+})();
+</script>
+<?php $hyvaCsp->registerInlineScript() ?>
