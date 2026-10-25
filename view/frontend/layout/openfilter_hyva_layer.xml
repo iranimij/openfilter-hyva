@@ -18,6 +18,8 @@
                    template="Iranimij_OpenFilterHyva::js/extras.phtml"/>
             <block class="Magento\Framework\View\Element\Template" name="openfilter.js.more" after="openfilter.js.extras"
                    template="Iranimij_OpenFilterHyva::js/more.phtml"/>
+            <block class="Magento\Framework\View\Element\Template" name="openfilter.js.insights" after="openfilter.js.more"
+                   template="Iranimij_OpenFilterHyva::js/insights.phtml"/>
         </referenceContainer>
     </body>
 </page>

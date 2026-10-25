@@ -47,7 +47,7 @@ class StorefrontModesTest extends HyvaPageTestCase
         $html = $this->page([]);
 
         foreach (['of-drawer--horizontal', 'of-drawer--sticky', 'data-of-apply-bar', 'of-group__hint', 'of-dropdown',
-            'window.openFilterStage = ', 'of-more-config', 'of-quick'] as $part) {
+            'window.openFilterStage = ', 'of-more-config', 'of-quick', 'of-insights'] as $part) {
             self::assertStringNotContainsString($part, $html, $part);
         }
     }
@@ -60,6 +60,23 @@ class StorefrontModesTest extends HyvaPageTestCase
 
         self::assertMatchesRegularExpression('#<div id="of-more-config" hidden data-mode="infinite"#', $html);
         self::assertSame(1, substr_count($html, "document.getElementById('of-more-config')"), 'one static script');
+    }
+
+    public function testInsightsPrintTheirBeaconOnlyWhenOn(): void
+    {
+        $this->config('openfilter/insights/enabled', '1');
+
+        $html = $this->page([M1Catalog::COLOR => 'red']);
+
+        self::assertMatchesRegularExpression('#<div id="of-insights" hidden data-url="[^"]+/openfilter/insights/collect/?"#', $html);
+        $red = self::$catalog['options'][M1Catalog::COLOR]['Red'];
+        self::assertSame(1, preg_match('#data-payload="([^"]+)"#', $html, $payload));
+        self::assertSame(
+            ['s' => 'default', 'f' => [M1Catalog::COLOR => [(string) $red]]],
+            array_diff_key(json_decode(html_entity_decode($payload[1], ENT_QUOTES | ENT_HTML5), true), ['c' => 0]),
+            'the store view and the active filters by option id, nothing else'
+        );
+        self::assertSame(1, substr_count($html, "doc.getElementById('of-insights')"), 'one static script');
     }
 
     public function testADropdownIsAGetFormThatKeepsTheOtherFilters(): void
